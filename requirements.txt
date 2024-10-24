@@ -1,0 +1,2 @@
+robin_stocks==3.1.0
+Quantify @ git+ssh://git@github.com/GreenPlanet-Capital/Quantify
