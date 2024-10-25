@@ -1,5 +1,9 @@
 from typing import List
-from Quantify.positions.position import Position
+from StratDaemon.models.crypto import (
+    CryptoAsset,
+    CryptoOrder,
+    CryptoHistorical,
+)
 
 
 class BaseIntegration:
@@ -9,5 +13,26 @@ class BaseIntegration:
     def authenticate(self) -> None:
         raise NotImplementedError
 
-    def get_crypto_positions(self) -> List[Position]:
+    def get_crypto_positions(self) -> List[CryptoAsset]:
+        raise NotImplementedError
+
+    def get_crypto_historical(
+        self, currency_code: str, interval: str, span: str
+    ) -> CryptoHistorical:
+        raise NotImplementedError
+
+    def buy_crypto_limit(
+        self, currency_code: str, amount: float, limit_price: float
+    ) -> CryptoOrder:
+        raise NotImplementedError
+
+    def buy_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
+        raise NotImplementedError
+
+    def sell_crypto_limit(
+        self, currency_code: str, amount: float, limit_price: float
+    ) -> CryptoOrder:
+        raise NotImplementedError
+
+    def sell_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
         raise NotImplementedError
