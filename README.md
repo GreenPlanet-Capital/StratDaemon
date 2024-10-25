@@ -16,13 +16,7 @@ pip install -e .
 **Integration**
 
 ```bash
-emacs creds.ini
-```
-
-```conf
-[robinhood]
-email = EMAIL_HERE
-password = PASSWORD_HERE
+emacs config.ini # Change values as needed
 ```
 
 ### Usage
