@@ -1,4 +1,3 @@
-import configparser
 from datetime import datetime
 from typing import Any, Dict, List
 import pandas as pd
@@ -9,6 +8,7 @@ from StratDaemon.models.crypto import (
     CryptoHistorical,
     CryptoOrder,
 )
+from StratDaemon.utils.constants import ROBINHOOD_EMAIL, ROBINHOOD_PASSWORD
 
 
 class RobinhoodIntegration(BaseIntegration):
@@ -16,12 +16,14 @@ class RobinhoodIntegration(BaseIntegration):
         super().__init__()
 
     def authenticate(self) -> None:
-        cfg_parser = configparser.ConfigParser()
-        cfg_parser.read("creds.ini")
+        # This is cached for the session
         r.login(
-            username=cfg_parser.get("robinhood", "email"),
-            password=cfg_parser.get("robinhood", "password"),
+            username=ROBINHOOD_EMAIL,
+            password=ROBINHOOD_PASSWORD,
         )
+
+    def deauthenticate(self) -> None:
+        r.logout()
 
     def get_crypto_positions(self) -> List[CryptoAsset]:
         orders = r.get_crypto_positions()

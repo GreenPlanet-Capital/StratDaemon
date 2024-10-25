@@ -5,10 +5,10 @@ Live monitor for managing financial assets with customized strategies
 
 **Developer**
 
-
-
 ```bash
 pip install -e .
+cp config.ini config_dev.ini
+export ENV=dev
 ```
 
 ### Setup
@@ -16,6 +16,7 @@ pip install -e .
 **Integration**
 
 ```bash
+git update-index --assume-unchanged config.ini
 emacs config.ini # Change values as needed
 ```
 
