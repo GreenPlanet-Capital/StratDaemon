@@ -1,6 +1,7 @@
 from typing import List
-from Quantify.positions.position import Position
 from StratDaemon.integration.robinhood import RobinhoodIntegration
+from StratDaemon.models.crypto import CryptoAsset
 
 rh_integration = RobinhoodIntegration()
-positions: List[Position] = rh_integration.get_crypto_positions()
+positions: List[CryptoAsset] = rh_integration.get_crypto_positions()
+print(positions)
