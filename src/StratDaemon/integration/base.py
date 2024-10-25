@@ -4,7 +4,7 @@ from StratDaemon.models.crypto import (
     CryptoOrder,
     CryptoHistorical,
 )
-
+from pandera.typing import DataFrame
 
 class BaseIntegration:
     def __init__(self) -> None:
@@ -18,7 +18,7 @@ class BaseIntegration:
 
     def get_crypto_historical(
         self, currency_code: str, interval: str, span: str
-    ) -> CryptoHistorical:
+    ) -> DataFrame[CryptoHistorical]:
         raise NotImplementedError
 
     def buy_crypto_limit(

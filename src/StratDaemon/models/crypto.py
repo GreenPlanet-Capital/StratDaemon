@@ -29,3 +29,10 @@ class CryptoOrder(BaseModel):
     limit_price: float  # -1 means market order
     quantity: float
     timestamp: datetime
+
+
+class CryptoLimitOrder(BaseModel):
+    side: str = Field(pattern="^(buy|sell)$")
+    currency_code: str
+    limit_price: float
+    amount: float

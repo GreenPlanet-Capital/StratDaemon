@@ -2,3 +2,5 @@ robin_stocks==3.1.0
 pandera==0.20.4
 pandas==1.5.3
 asyncio==3.4.3
+pandas_ta==0.3.14b0
+devtools==0.12.2

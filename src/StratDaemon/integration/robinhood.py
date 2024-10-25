@@ -9,6 +9,7 @@ from StratDaemon.models.crypto import (
     CryptoOrder,
 )
 from StratDaemon.utils.constants import ROBINHOOD_EMAIL, ROBINHOOD_PASSWORD
+from pandera.typing import DataFrame
 
 
 class RobinhoodIntegration(BaseIntegration):
@@ -41,7 +42,7 @@ class RobinhoodIntegration(BaseIntegration):
 
     def get_crypto_historical(
         self, currency_code: str, interval: str, span: str
-    ) -> CryptoHistorical:
+    ) -> DataFrame[CryptoHistorical]:
         hist_data = r.get_crypto_historicals(
             currency_code, interval=interval, span=span
         )
