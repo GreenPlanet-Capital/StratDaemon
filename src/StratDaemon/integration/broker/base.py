@@ -6,7 +6,7 @@ from StratDaemon.models.crypto import (
 )
 from pandera.typing import DataFrame
 
-class BaseIntegration:
+class BaseBroker:
     def __init__(self) -> None:
         self.authenticate()
 

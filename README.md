@@ -1,9 +1,10 @@
 # StratDaemon
+
 Live monitor for managing financial assets with customized strategies
 
-### Installation
+## Installation
 
-**Developer**
+### Developer
 
 ```bash
 pip install -e .
@@ -13,7 +14,7 @@ export ENV=dev
 
 ### Setup
 
-**Integration**
+#### Integration
 
 ```bash
 git update-index --assume-unchanged config.ini
@@ -22,6 +23,10 @@ emacs config.ini # Change values as needed
 
 ### Usage
 
-Check the `sample.py` script. 
+Check the `sample.py` script.
 
-_Note_: You might have to enter Robinhood's 2FA code if you are running this for the first time.
+### Notes
+
+- You might have to enter Robinhood's 2FA code if you are running this for the first time.
+
+- If you are using a Google account, you would need to generate an App Password for authentication. You can do this by visiting [Google App Passwords](https://myaccount.google.com/apppasswords). `config.ini` should be updated with the generated password.

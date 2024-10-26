@@ -8,5 +8,27 @@ cfg_parser.read(CONFIG_FILE)
 ROBINHOOD_EMAIL = cfg_parser.get("robinhood", "email")
 ROBINHOOD_PASSWORD = cfg_parser.get("robinhood", "password")
 
-HISTORICAL_INTERVAL = cfg_parser.get("general", "historical_interval")
-HISTORICAL_SPAN = cfg_parser.get("general", "historical_span")
+HISTORICAL_INTERVAL = cfg_parser.get("broker", "historical_interval")
+HISTORICAL_SPAN = cfg_parser.get("broker", "historical_span")
+
+CARRIER_MAP = {
+    "verizon": "vtext.com",
+    "tmobile": "tmomail.net",
+    "sprint": "messaging.sprintpcs.com",
+    "at&t": "txt.att.net",
+    "boost": "smsmyboostmobile.com",
+    "cricket": "sms.cricketwireless.net",
+    "uscellular": "email.uscc.net",
+}
+PHONE_NUMBER = cfg_parser.get("sms", "phone_number")
+CARRIER = cfg_parser.get("sms", "carrier").lower()
+
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+GMAIL_EMAIL = cfg_parser.get("gmail", "email")
+GMAIL_PASSWORD = cfg_parser.get("gmail", "password")
+
+CRYPTO_DB_URL = "https://comerciohub.tech/api/crypto"
+
+POLL_INTERVAL_SEC = cfg_parser.getint("confirmation", "polling_interval_sec")
+MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count")

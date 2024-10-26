@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 import pandas as pd
 import robin_stocks.robinhood as r
-from StratDaemon.integration.base import BaseIntegration
+from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.models.crypto import (
     CryptoAsset,
     CryptoHistorical,
@@ -12,7 +12,7 @@ from StratDaemon.utils.constants import ROBINHOOD_EMAIL, ROBINHOOD_PASSWORD
 from pandera.typing import DataFrame
 
 
-class RobinhoodIntegration(BaseIntegration):
+class RobinhoodBroker(BaseBroker):
     def __init__(self) -> None:
         super().__init__()
 
