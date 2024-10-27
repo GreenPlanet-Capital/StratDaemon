@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List
 import pandas as pd
+import pytz
 import robin_stocks.robinhood as r
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.models.crypto import (
@@ -40,6 +41,18 @@ class RobinhoodBroker(BaseBroker):
             for order in orders
         ]
 
+    def get_crypto_latest(self, currency_code: str) -> Dict[str, Any]:
+        cur_data = r.get_crypto_quote(currency_code)
+        return {
+            "currency_code": currency_code,
+            "open": float(cur_data["open_price"]),
+            "high": float(cur_data["high_price"]),
+            "close": float(cur_data["mark_price"]),
+            "low": float(cur_data["low_price"]),
+            "volume": float(cur_data["volume"]),
+            "timestamp": datetime.now(pytz.utc),
+        }
+
     def get_crypto_historical(
         self, currency_code: str, interval: str, span: str
     ) -> DataFrame[CryptoHistorical]:
@@ -59,6 +72,10 @@ class RobinhoodBroker(BaseBroker):
             }
             for data in hist_data
         ]
+        hist_data_parsed.append(self.get_crypto_latest(currency_code))
+        import pdb
+
+        pdb.set_trace()
         df = pd.DataFrame(hist_data_parsed)
         return CryptoHistorical.validate(df)
 
