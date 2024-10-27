@@ -73,7 +73,7 @@ class BaseStrategy:
                 if self.paper_trade:
                     print(f"Paper trading {order.side} order:")
                 else:
-                    pprint(f"Executing live {order.side} order:")
+                    print(f"Executing live {order.side} order:")
                     processed_orders.append(
                         self.broker.buy_crypto_market(order.currency_code, order.amount)
                     )
