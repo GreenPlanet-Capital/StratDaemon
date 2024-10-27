@@ -32,20 +32,20 @@ emacs config.ini # Change values as needed
 
 #### For Developer
 
-Check the `sample.py` script.
+Check the `examples/sample.py` script.
 
 #### For User
 
 - `config.ini` should be updated with your Robinhood credentials and other settings. This should be in directory where you run the below commands.
 
-- Orders should be in JSON format. You can refer to `sample_orders.json` for the structure.
+- Orders should be in JSON format. You can refer to `examples/sample_orders.json` for the structure.
 
 ```bash
 strat-daemon --help
 strat-daemon start --help
 
 # Example with default parameters
-strat-daemon start --path-to-orders sample_orders.json
+strat-daemon start --path-to-orders examples/sample_orders.json
 ```
 
 ### Notes
