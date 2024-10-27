@@ -50,6 +50,7 @@ class BaseStrategy:
 
         for order in self.limit_orders:
             df = dt_dfs[order.currency_code]
+            df = self.transform_df(df)
             most_recent_data: Series[CryptoHistorical] = df.iloc[-1]
 
             order = CryptoOrder(
@@ -107,3 +108,8 @@ class BaseStrategy:
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
         raise NotImplementedError("This method should be overridden by subclasses")
+
+    def transform_df(
+        self, df: DataFrame[CryptoHistorical]
+    ) -> DataFrame[CryptoHistorical]:
+        return df

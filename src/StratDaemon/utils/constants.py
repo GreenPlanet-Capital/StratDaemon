@@ -32,3 +32,5 @@ CRYPTO_DB_URL = "https://comerciohub.tech/api/crypto"
 
 POLL_INTERVAL_SEC = cfg_parser.getint("confirmation", "polling_interval_sec")
 MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count")
+
+DEFAULT_INDICATOR_LENGTH = 14

@@ -1,6 +1,6 @@
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
 from StratDaemon.models.crypto import CryptoLimitOrder
-from StratDaemon.strats.naive import NaiveStrategy
+from StratDaemon.strats.rsi_boll import RsiBollStrategy
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 
@@ -8,7 +8,7 @@ from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 rh_integration = RobinhoodBroker()
 notif = SMSNotification()
 conf = CryptoDBConfirmation()
-strat = NaiveStrategy(
+strat = RsiBollStrategy(
     rh_integration, notif, conf, paper_trade=True, confirm_before_trade=True
 )
 strat.add_limit_order(

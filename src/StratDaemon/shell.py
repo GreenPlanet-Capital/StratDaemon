@@ -6,6 +6,8 @@ from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
 from StratDaemon.strats.naive import NaiveStrategy
+from StratDaemon.strats.rsi import RsiStrategy
+from StratDaemon.strats.rsi_boll import RsiBollStrategy
 from StratDaemon.utils.constants import cfg_parser as strat_cfg_parser
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
 import asyncio
@@ -17,7 +19,7 @@ app = typer.Typer()
 
 @app.command(help="Start the strat daemon")
 def start(
-    strategy: Annotated[str, typer.Option("--strategy", "-s")] = "naive",
+    strategy: Annotated[str, typer.Option("--strategy", "-s")] = "rsi",
     path_to_orders: Annotated[str, typer.Option("--path-to-orders", "-pto")] = None,
     integration: Annotated[str, typer.Option("--integration", "-i")] = "robinhood",
     notification: Annotated[str, typer.Option("--notification", "-n")] = "sms",
@@ -26,7 +28,7 @@ def start(
     confirm_before_trade: Annotated[
         bool, typer.Option("--confirm-before-trade", "-cbt")
     ] = False,
-    poll_interval: Annotated[int, typer.Option("--poll-interval", "-pi")] = 60,
+    poll_interval: Annotated[int, typer.Option("--poll-interval", "-pi")] = 60 * 5,
     poll_on_start: Annotated[bool, typer.Option("--poll-on-start", "-pos")] = True,
 ):
     match integration:
@@ -53,11 +55,17 @@ def start(
 
     match strategy:
         case "naive":
-            strat = NaiveStrategy(
-                broker, notif, conf, paper_trade, confirm_before_trade
-            )
+            strat_class = NaiveStrategy
+        case "rsi":
+            strat_class = RsiStrategy
+        case "rsi_boll":
+            strat_class = RsiBollStrategy
         case _:
-            raise typer.Exit("Invalid strategy. Needs to be one of: naive")
+            raise typer.Exit(
+                "Invalid strategy. Needs to be one of: naive, rsi, rsi_boll"
+            )
+
+    strat = strat_class(broker, notif, conf, paper_trade, confirm_before_trade)
 
     if path_to_orders is not None:
         if not os.path.exists(path_to_orders):
