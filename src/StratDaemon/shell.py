@@ -5,6 +5,7 @@ from StratDaemon.daemons.strat import StratDaemon
 from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
+from StratDaemon.strats.boll import BollStrategy
 from StratDaemon.strats.naive import NaiveStrategy
 from StratDaemon.strats.rsi import RsiStrategy
 from StratDaemon.strats.rsi_boll import RsiBollStrategy
@@ -58,11 +59,13 @@ def start(
             strat_class = NaiveStrategy
         case "rsi":
             strat_class = RsiStrategy
+        case "boll":
+            strat_class = BollStrategy
         case "rsi_boll":
             strat_class = RsiBollStrategy
         case _:
             raise typer.Exit(
-                "Invalid strategy. Needs to be one of: naive, rsi, rsi_boll"
+                "Invalid strategy. Needs to be one of: naive, rsi, boll, rsi_boll"
             )
 
     strat = strat_class(broker, notif, conf, paper_trade, confirm_before_trade)
