@@ -12,7 +12,7 @@ class BaseDaemon:
     async def _execute_task(self) -> None:
         await self._task()
 
-    async def start_daemon(self) -> None:
+    async def start(self) -> None:
         while True:
             if self.run_on_start:
                 await self._execute_task()

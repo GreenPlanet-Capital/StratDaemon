@@ -10,14 +10,15 @@ from pandera.typing import DataFrame, Series
 class NaiveStrategy(BaseStrategy):
     def __init__(
         self,
-        name: str,
         broker: BaseBroker,
         notif: BaseNotification,
         conf: BaseConfirmation,
         paper_trade: bool = False,
         confirm_before_trade: bool = False,
     ) -> None:
-        super().__init__(name, broker, notif, conf, paper_trade, confirm_before_trade)
+        super().__init__(
+            "naivety", broker, notif, conf, paper_trade, confirm_before_trade
+        )
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder

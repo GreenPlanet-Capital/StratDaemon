@@ -10,4 +10,8 @@ class StratDaemon(BaseDaemon):
         super().__init__(self.task, poll_interval, poll_on_start)
 
     async def task(self):
+        print(
+            f"Executing strategy {self.strat.name} with {"paper" if self.strat.paper_trade else "live"} trading"
+        )
         self.strat.execute()
+        print("Strategy executed.")

@@ -45,9 +45,6 @@ class BaseStrategy:
         }
 
     def execute(self) -> List[CryptoOrder]:
-        print(
-            f"Executing strategy {self.name} with {"paper" if self.paper_trade else "live"} trading"
-        )
         dt_dfs = self.construct_dt_df()
         processed_orders = []
 

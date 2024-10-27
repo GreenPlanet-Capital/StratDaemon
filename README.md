@@ -12,9 +12,16 @@ cp config.ini config_dev.ini
 export ENV=dev
 ```
 
-### Setup
+### User
 
-#### Integration
+```bash
+pip install .
+strat-daemon --install-completion zsh
+```
+
+## Setup
+
+### Integration
 
 ```bash
 git update-index --assume-unchanged config.ini
@@ -23,7 +30,23 @@ emacs config.ini # Change values as needed
 
 ### Usage
 
+#### For Developer
+
 Check the `sample.py` script.
+
+#### For User
+
+- `config.ini` should be updated with your Robinhood credentials and other settings. This should be in directory where you run the below commands.
+
+- Orders should be in JSON format. You can refer to `sample_orders.json` for the structure.
+
+```bash
+strat-daemon --help
+strat-daemon start --help
+
+# Example with default parameters
+strat-daemon start --path-to-orders sample_orders.json
+```
 
 ### Notes
 

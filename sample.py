@@ -9,7 +9,7 @@ rh_integration = RobinhoodBroker()
 notif = SMSNotification()
 conf = CryptoDBConfirmation()
 strat = NaiveStrategy(
-    "naivety", rh_integration, notif, conf, paper_trade=True, confirm_before_trade=True
+    rh_integration, notif, conf, paper_trade=True, confirm_before_trade=True
 )
 strat.add_limit_order(
     CryptoLimitOrder(

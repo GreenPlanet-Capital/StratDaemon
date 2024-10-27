@@ -1,0 +1,8 @@
+[
+    {
+        "side": "buy",
+        "currency_code": "DOGE",
+        "limit_price": 1,
+        "amount": 1
+    }
+]
