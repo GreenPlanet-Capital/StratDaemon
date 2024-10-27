@@ -40,12 +40,14 @@ Check the `examples/sample.py` script.
 
 - Orders should be in JSON format. You can refer to `examples/sample_orders.json` for the structure.
 
+- Currency codes should be in TXT format. You can refer to `examples/sample_currencies.txt` for the structure.
+
 ```bash
 strat-daemon --help
 strat-daemon start --help
 
 # Example with default parameters
-strat-daemon start --path-to-orders examples/sample_orders.json
+strat-daemon start --path-to-orders examples/sample_orders.json --path-to-currency-codes examples/sample_currency_codes.txt
 ```
 
 ### Notes

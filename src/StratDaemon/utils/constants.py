@@ -34,3 +34,6 @@ POLL_INTERVAL_SEC = cfg_parser.getint("confirmation", "polling_interval_sec")
 MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count")
 
 DEFAULT_INDICATOR_LENGTH = 14
+FIB_VALUES = [2.168, 2, 1.618, 1.382, 1, 0.618]
+PERCENT_DIFF_THRESHOLD = 0.01
+VOL_WINDOW_SIZE = 5

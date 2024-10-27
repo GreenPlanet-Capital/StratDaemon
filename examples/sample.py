@@ -1,22 +1,29 @@
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
-from StratDaemon.models.crypto import CryptoLimitOrder
-from StratDaemon.strats.rsi_boll import RsiBollStrategy
+from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 
 
-rh_integration = RobinhoodBroker()
+integration = RobinhoodBroker()
 notif = SMSNotification()
 conf = CryptoDBConfirmation()
-strat = RsiBollStrategy(
-    rh_integration, notif, conf, paper_trade=True, confirm_before_trade=True
+
+strat = FibVolStrategy(
+    integration,
+    notif,
+    conf,
+    currency_codes=["DOGE"],
+    auto_generate_orders=True,
+    max_amount_per_order=100,
+    paper_trade=True,
+    confirm_before_trade=False,
 )
-strat.add_limit_order(
-    CryptoLimitOrder(
-        side="buy",
-        currency_code="BTC",
-        limit_price=70000,
-        amount=1,
-    )
-)
+# strat.add_limit_order(
+#     CryptoLimitOrder(
+#         side="buy",
+#         currency_code="BTC",
+#         limit_price=60_000,
+#         amount=1,
+#     )
+# )
 orders = strat.execute()

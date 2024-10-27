@@ -8,6 +8,8 @@ __pycache__/
 config_dev.ini
 *orders.json
 !sample_orders.json
+*currency_codes.txt
+!sample_currency_codes.txt
 
 # Distribution / packaging
 .Python

@@ -12,6 +12,7 @@ class StratDaemon(BaseDaemon):
     async def task(self):
         print(
             f"Executing strategy {self.strat.name} with {"paper" if self.strat.paper_trade else "live"} trading"
+            f" and {'auto-generating orders' if self.strat.auto_generate_orders else 'without auto-generating orders'}."
         )
         self.strat.execute()
         print("Strategy executed.")

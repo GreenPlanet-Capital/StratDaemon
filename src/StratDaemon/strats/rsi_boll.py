@@ -1,13 +1,13 @@
+from typing import List
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.confirmation.base import BaseConfirmation
 from StratDaemon.integration.notification.base import BaseNotification
 from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.models.crypto import CryptoHistorical, CryptoLimitOrder
 from pandera.typing import DataFrame
-import pandas_ta as ta
 from StratDaemon.utils.constants import DEFAULT_INDICATOR_LENGTH
-from StratDaemon.utils.funcs import normalize_values
 import pandas as pd
+from StratDaemon.utils.indicators import add_boll_diff, add_rsi
 
 pd.options.mode.chained_assignment = None
 
@@ -18,11 +18,22 @@ class RsiBollStrategy(BaseStrategy):
         broker: BaseBroker,
         notif: BaseNotification,
         conf: BaseConfirmation,
+        currency_codes: List[str] = None,
+        auto_generate_orders: bool = False,
+        max_amount_per_order: float = 0.0,
         paper_trade: bool = False,
         confirm_before_trade: bool = False,
     ) -> None:
         super().__init__(
-            "rsi_bollinger", broker, notif, conf, paper_trade, confirm_before_trade
+            "rsi_bollinger",
+            broker,
+            notif,
+            conf,
+            currency_codes,
+            auto_generate_orders,
+            max_amount_per_order,
+            paper_trade,
+            confirm_before_trade,
         )
 
     def execute_buy_condition(
@@ -46,11 +57,6 @@ class RsiBollStrategy(BaseStrategy):
     def transform_df(
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
-        df["rsi"] = ta.rsi(df["close"], length=DEFAULT_INDICATOR_LENGTH)
-        boll = ta.bbands(df["close"], length=DEFAULT_INDICATOR_LENGTH)
-
-        df["boll_diff"] = boll[f"BBU_14_2.0"] - boll["BBL_14_2.0"]
-        df = df.dropna()
-        df["boll_diff"] = normalize_values(df["boll_diff"], 0, 1)
-
+        df = add_boll_diff(df, DEFAULT_INDICATOR_LENGTH)
+        df = add_rsi(df, DEFAULT_INDICATOR_LENGTH)
         return df

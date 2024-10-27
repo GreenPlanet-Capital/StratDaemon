@@ -6,6 +6,7 @@ from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
 from StratDaemon.strats.boll import BollStrategy
+from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.naive import NaiveStrategy
 from StratDaemon.strats.rsi import RsiStrategy
 from StratDaemon.strats.rsi_boll import RsiBollStrategy
@@ -25,6 +26,15 @@ def start(
     integration: Annotated[str, typer.Option("--integration", "-i")] = "robinhood",
     notification: Annotated[str, typer.Option("--notification", "-n")] = "sms",
     confirmation: Annotated[str, typer.Option("--confirmation", "-c")] = "crypto_db",
+    path_to_currency_codes: Annotated[
+        str, typer.Option("--path-to-currency-codes", "-ptc")
+    ] = None,
+    auto_generate_orders: Annotated[
+        bool, typer.Option("--auto-generate-orders", "-ago")
+    ] = False,
+    max_amount_per_order: Annotated[
+        float, typer.Option("--max-amount-per-order", "-mapo")
+    ] = 0.0,
     paper_trade: Annotated[bool, typer.Option("--paper-trade", "-p")] = False,
     confirm_before_trade: Annotated[
         bool, typer.Option("--confirm-before-trade", "-cbt")
@@ -63,12 +73,33 @@ def start(
             strat_class = BollStrategy
         case "rsi_boll":
             strat_class = RsiBollStrategy
+        case "fib_vol":
+            strat_class = FibVolStrategy
         case _:
             raise typer.Exit(
-                "Invalid strategy. Needs to be one of: naive, rsi, boll, rsi_boll"
+                "Invalid strategy. Needs to be one of: naive, rsi, boll, rsi_boll, fib_vol"
             )
 
-    strat = strat_class(broker, notif, conf, paper_trade, confirm_before_trade)
+    if path_to_currency_codes is not None:
+        if not os.path.exists(path_to_currency_codes):
+            raise typer.Exit(
+                f"Path to currency codes does not exist: {path_to_currency_codes}"
+            )
+        with open(path_to_currency_codes, "r") as f:
+            currency_codes = [line.strip() for line in f.readlines()]
+    else:
+        currency_codes = None
+
+    strat = strat_class(
+        broker,
+        notif,
+        conf,
+        currency_codes,
+        auto_generate_orders,
+        max_amount_per_order,
+        paper_trade,
+        confirm_before_trade,
+    )
 
     if path_to_orders is not None:
         if not os.path.exists(path_to_orders):

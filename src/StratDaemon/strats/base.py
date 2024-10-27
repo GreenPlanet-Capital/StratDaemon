@@ -21,6 +21,9 @@ class BaseStrategy:
         broker: BaseBroker,
         notif: BaseNotification,
         conf: BaseConfirmation,
+        currency_codes: List[str] = None,
+        auto_generate_orders: bool = False,
+        max_amount_per_order: float = 0.0,
         paper_trade: bool = False,
         confirm_before_trade: bool = False,
     ) -> None:
@@ -29,28 +32,45 @@ class BaseStrategy:
         self.notif = notif
         self.conf = conf
         self.limit_orders: List[CryptoLimitOrder] = []
+        self.currency_codes = currency_codes or []
+        self.auto_generate_orders = auto_generate_orders
+        self.max_amount_per_order = max_amount_per_order
         self.paper_trade = paper_trade
         self.confirm_before_trade = confirm_before_trade
 
     def add_limit_order(self, order: CryptoLimitOrder):
+        if self.auto_generate_orders:
+            print(
+                "Auto-generating orders is enabled. It is recommended not to add limit orders manually."
+            )
         self.limit_orders.append(order)
 
     def construct_dt_df(self) -> Dict[str, DataFrame[CryptoHistorical]]:
         currency_codes = {order.currency_code for order in self.limit_orders}
-        return {
-            currency_code: self.broker.get_crypto_historical(
+        currency_codes.update(self.currency_codes)
+        dt_dfs = dict()
+        for currency_code in currency_codes:
+            df = self.broker.get_crypto_historical(
                 currency_code, HISTORICAL_INTERVAL, HISTORICAL_SPAN
             )
-            for currency_code in currency_codes
-        }
+            df = self.transform_df(df)
+            dt_dfs[currency_code] = df
+        return dt_dfs
 
     def execute(self) -> List[CryptoOrder]:
         dt_dfs = self.construct_dt_df()
         processed_orders = []
 
+        orders_to_process = self.limit_orders.copy()
+
+        if self.auto_generate_orders is True:
+            for currency_code in self.currency_codes:
+                orders_to_process.extend(
+                    self.get_auto_generated_orders(currency_code, dt_dfs[currency_code])
+                )
+
         for order in self.limit_orders:
             df = dt_dfs[order.currency_code]
-            df = self.transform_df(df)
             most_recent_data: Series[CryptoHistorical] = df.iloc[-1]
 
             order = CryptoOrder(
@@ -113,3 +133,8 @@ class BaseStrategy:
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
         return df
+
+    def get_auto_generated_orders(
+        self, currency_code: str, df: DataFrame[CryptoHistorical]
+    ) -> List[CryptoLimitOrder]:
+        return []

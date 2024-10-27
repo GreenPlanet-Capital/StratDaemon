@@ -1,11 +1,12 @@
+from typing import List
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.confirmation.base import BaseConfirmation
 from StratDaemon.integration.notification.base import BaseNotification
 from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.models.crypto import CryptoHistorical, CryptoLimitOrder
 from pandera.typing import DataFrame
-import pandas_ta as ta
 from StratDaemon.utils.constants import DEFAULT_INDICATOR_LENGTH
+from StratDaemon.utils.indicators import add_rsi
 
 
 class RsiStrategy(BaseStrategy):
@@ -14,10 +15,23 @@ class RsiStrategy(BaseStrategy):
         broker: BaseBroker,
         notif: BaseNotification,
         conf: BaseConfirmation,
+        currency_codes: List[str] = None,
+        auto_generate_orders: bool = False,
+        max_amount_per_order: float = 0.0,
         paper_trade: bool = False,
         confirm_before_trade: bool = False,
     ) -> None:
-        super().__init__("rsi", broker, notif, conf, paper_trade, confirm_before_trade)
+        super().__init__(
+            "rsi",
+            broker,
+            notif,
+            conf,
+            currency_codes,
+            auto_generate_orders,
+            max_amount_per_order,
+            paper_trade,
+            confirm_before_trade,
+        )
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
@@ -32,5 +46,4 @@ class RsiStrategy(BaseStrategy):
     def transform_df(
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
-        df["rsi"] = ta.rsi(df["close"], length=DEFAULT_INDICATOR_LENGTH)
-        return df
+        return add_rsi(df, DEFAULT_INDICATOR_LENGTH)
