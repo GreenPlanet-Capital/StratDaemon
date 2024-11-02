@@ -73,9 +73,6 @@ class RobinhoodBroker(BaseBroker):
             for data in hist_data
         ]
         hist_data_parsed.append(self.get_crypto_latest(currency_code))
-        import pdb
-
-        pdb.set_trace()
         df = pd.DataFrame(hist_data_parsed)
         return CryptoHistorical.validate(df)
 

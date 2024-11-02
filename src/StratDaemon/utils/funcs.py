@@ -18,4 +18,4 @@ def normalize_values(series: pd.Series, lower_bound, upper_bound) -> pd.Series:
 
 
 def percent_difference(value1, value2):
-    return (value1 - value2) / value2 * 100 if value2 != 0 else 0
+    return (value1 - value2) / value2 if value2 != 0 else 0

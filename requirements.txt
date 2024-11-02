@@ -5,3 +5,5 @@ asyncio==3.4.3
 pandas_ta==0.3.14b0
 devtools==0.12.2
 typer==0.7.0
+requests==2.31.0
+tqdm==4.66.5

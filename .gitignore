@@ -10,6 +10,7 @@ config_dev.ini
 !sample_orders.json
 *currency_codes.txt
 !sample_currency_codes.txt
+*_historical_data.json
 
 # Distribution / packaging
 .Python

@@ -1,5 +1,3 @@
-from typing import List
-import pandas as pd
 from pandera.typing import DataFrame
 from StratDaemon.models.crypto import CryptoHistorical
 from StratDaemon.utils.constants import FIB_VALUES
@@ -41,7 +39,8 @@ def add_rsi(
 
 
 def add_trends_upwards(df: DataFrame[CryptoHistorical]) -> DataFrame[CryptoHistorical]:
-    sma_50 = ta.sma(df["close"], length=50)
-    sma_200 = ta.sma(df["close"], length=200)
+    n = len(df)
+    sma_50 = ta.sma(df["close"], length=n // 2)
+    sma_200 = ta.sma(df["close"], length=n)
     df["trends_upwards"] = sma_50 >= sma_200
     return df

@@ -50,7 +50,7 @@ class FibVolStrategy(BaseStrategy):
     ) -> bool:
         return (
             abs(percent_difference(df.iloc[-1].close, order.limit_price))
-            < PERCENT_DIFF_THRESHOLD
+            <= PERCENT_DIFF_THRESHOLD
         )
 
     def is_vol_increasing(self, df: DataFrame[CryptoHistorical]) -> bool:
@@ -87,7 +87,6 @@ class FibVolStrategy(BaseStrategy):
         closest_idx = (fib_vals - sr.close).argmin()
 
         orders = []
-
         if sr.trends_upwards:
             orders.append(
                 CryptoLimitOrder(

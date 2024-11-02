@@ -45,20 +45,29 @@ class BaseStrategy:
             )
         self.limit_orders.append(order)
 
-    def construct_dt_df(self) -> Dict[str, DataFrame[CryptoHistorical]]:
+    def construct_dt_df(
+        self, dt_dfs_input: Dict[str, DataFrame[CryptoHistorical]] | None
+    ) -> Dict[str, DataFrame[CryptoHistorical]]:
         currency_codes = {order.currency_code for order in self.limit_orders}
         currency_codes.update(self.currency_codes)
         dt_dfs = dict()
         for currency_code in currency_codes:
-            df = self.broker.get_crypto_historical(
-                currency_code, HISTORICAL_INTERVAL, HISTORICAL_SPAN
-            )
+            if dt_dfs_input is not None and currency_code in dt_dfs_input:
+                df = dt_dfs_input[currency_code]
+            else:
+                df = self.broker.get_crypto_historical(
+                    currency_code, HISTORICAL_INTERVAL, HISTORICAL_SPAN
+                )
             df = self.transform_df(df)
             dt_dfs[currency_code] = df
         return dt_dfs
 
-    def execute(self) -> List[CryptoOrder]:
-        dt_dfs = self.construct_dt_df()
+    def execute(
+        self,
+        dt_dfs_input: Dict[str, DataFrame[CryptoHistorical]] | None = None,
+        print_orders: bool = True,
+    ) -> List[CryptoOrder]:
+        dt_dfs = self.construct_dt_df(dt_dfs_input)
         processed_orders = []
 
         orders_to_process = self.limit_orders.copy()
@@ -69,7 +78,7 @@ class BaseStrategy:
                     self.get_auto_generated_orders(currency_code, dt_dfs[currency_code])
                 )
 
-        for order in self.limit_orders:
+        for order in orders_to_process:
             df = dt_dfs[order.currency_code]
             most_recent_data: Series[CryptoHistorical] = df.iloc[-1]
 
@@ -91,13 +100,16 @@ class BaseStrategy:
                     print("Confirmation received, proceeding with order.")
 
                 if self.paper_trade:
-                    print(f"Paper trading {order.side} order:")
+                    if print_orders:
+                        print(f"Paper trading {order.side} order:")
                 else:
-                    print(f"Executing live {order.side} order:")
+                    if print_orders:
+                        print(f"Executing live {order.side} order:")
                     processed_orders.append(
                         self.broker.buy_crypto_market(order.currency_code, order.amount)
                     )
-                pprint(order)
+                if print_orders:
+                    pprint(order)
 
         return processed_orders
 
