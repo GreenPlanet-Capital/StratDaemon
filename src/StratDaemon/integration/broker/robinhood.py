@@ -10,7 +10,7 @@ from StratDaemon.models.crypto import (
     CryptoOrder,
 )
 from StratDaemon.utils.constants import ROBINHOOD_EMAIL, ROBINHOOD_PASSWORD
-from pandera.typing import DataFrame
+from pandera.typing import DataFrame, Series
 
 
 class RobinhoodBroker(BaseBroker):
@@ -83,7 +83,12 @@ class RobinhoodBroker(BaseBroker):
             r.order_buy_crypto_limit_by_price(currency_code, amount, limit_price)
         )
 
-    def buy_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
+    def buy_crypto_market(
+        self,
+        currency_code: str,
+        amount: float,
+        cur_df: Series[CryptoHistorical] | None,
+    ) -> CryptoOrder:
         return self.convert_order_to_obj(
             r.order_buy_crypto_by_price(currency_code, amount)
         )
@@ -95,7 +100,12 @@ class RobinhoodBroker(BaseBroker):
             r.order_sell_crypto_limit_by_price(currency_code, amount, limit_price)
         )
 
-    def sell_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
+    def sell_crypto_market(
+        self,
+        currency_code: str,
+        amount: float,
+        cur_df: Series[CryptoHistorical] | None,
+    ) -> CryptoOrder:
         return self.convert_order_to_obj(
             r.order_sell_crypto_by_price(currency_code, amount)
         )

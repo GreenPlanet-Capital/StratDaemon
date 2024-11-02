@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
-from pandera.typing import DataFrame
+from pandera.typing import DataFrame, Series
 import requests
 from datetime import datetime
 from StratDaemon.utils.constants import CRYPTO_COMPARE_API_KEY
@@ -120,28 +120,30 @@ class FakeBroker(BaseBroker):
     def formulate_url(self, base_url, interval, req_args):
         return f"{base_url}{interval}?{'&'.join([f'{k}={v}' for k, v in req_args.items()])}"
 
-    def buy_crypto_market(self, currency_code, amount) -> CryptoOrder:
-        cur_price = self.get_crypto_latest(currency_code)
+    def buy_crypto_market(
+        self, currency_code: str, amount: float, cur_df: Series[CryptoHistorical] | None
+    ) -> CryptoOrder:
         return CryptoOrder(
             side="buy",
             currency_code=currency_code,
-            asset_price=cur_price,
-            quantity=amount / cur_price,
+            asset_price=cur_df.close,
+            quantity=amount / cur_df.close,
             amount=amount,
             limit_price=-1,
-            timestamp=datetime.now(),
+            timestamp=cur_df.timestamp,
         )
 
-    def sell_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
-        cur_price = self.get_crypto_latest(currency_code)
+    def sell_crypto_market(
+        self, currency_code: str, amount: float, cur_df: Series[CryptoHistorical] | None
+    ) -> CryptoOrder:
         return CryptoOrder(
             side="sell",
             currency_code=currency_code,
-            asset_price=cur_price,
-            quantity=amount / cur_price,
+            asset_price=cur_df.close,
+            quantity=amount / cur_df.close,
             amount=amount,
             limit_price=-1,
-            timestamp=datetime.now(),
+            timestamp=cur_df.timestamp,
         )
 
     def clean_data(
@@ -152,4 +154,4 @@ class FakeBroker(BaseBroker):
 
 if __name__ == "__main__":
     broker = FakeBroker()
-    hist = broker.get_crypto_historical("DOGE", "hour", pull_from_api=True)
+    hist = broker.get_crypto_historical("DOGE", "hour", pull_from_api=False)

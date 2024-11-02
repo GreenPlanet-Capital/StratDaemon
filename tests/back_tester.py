@@ -19,10 +19,13 @@ class BackTester:
         self.broker = DEFAULT_BROKER
         self.currency_code = currency_code
         self.buy_power = buy_power
+        self.strat_name = self.strat.name.split("_")[0]
         self.all_data = self.broker.get_crypto_historical(
             self.currency_code, "hour", pull_from_api=False
         )
         self.span = 24
+
+    def save_portfolio(self, portfolio_hist: List[Portfolio]) -> None: ...
 
     def run(self):
         portfolio_hist = [Portfolio(value=self.buy_power, buy_power=self.buy_power)]
@@ -30,7 +33,7 @@ class BackTester:
 
         for df in tqdm(
             self.get_data_by_interval(self.span),
-            desc=f"Backtesting {self.currency_code} with {self.strat.name.split('_')[0]} strategy",
+            desc=f"Backtesting {self.currency_code} with {self.strat_name} strategy",
             total=len(self.all_data) - self.span,
         ):
             input_dt_dfs = {self.currency_code: df}
@@ -38,26 +41,33 @@ class BackTester:
             prev_portfolio = portfolio_hist[-1]
 
             for order in orders:
-                cur_portfolio = self.process_order(order, prev_portfolio)
+                cur_portfolio = self.process_order(df, order, prev_portfolio)
                 portfolio_hist.append(cur_portfolio)
 
         print(f"Ending with ${portfolio_hist[-1].value}")
         return portfolio_hist
 
-    def process_order(self, order: CryptoOrder, prev_portfolio: Portfolio) -> Portfolio:
+    def process_order(
+        self,
+        df: DataFrame[CryptoHistorical],
+        order: CryptoOrder,
+        prev_portfolio: Portfolio,
+    ) -> Portfolio:
         cur_portfolio = Portfolio(
             value=prev_portfolio.value,
             buy_power=prev_portfolio.buy_power,
         )
+        cur_price = df.iloc[-1].close
         cur_holdings = getattr(self, f"handle_{order.side}_order")(
-            order, prev_portfolio, cur_portfolio, cur_holdings
+            cur_price, order, prev_portfolio, cur_portfolio
         )
         cur_portfolio.holdings = cur_holdings
-        cur_portfolio.value = self.calculate_portfolio_value(cur_portfolio)
+        cur_portfolio.value = self.calculate_portfolio_value(cur_portfolio, cur_price)
         return cur_portfolio
 
-    def calculate_portfolio_value(self, portfolio: Portfolio) -> float:
-        cur_price = self.broker.get_crypto_latest(self.currency_code)
+    def calculate_portfolio_value(
+        self, portfolio: Portfolio, cur_price: float
+    ) -> float:
         holdings_value = portfolio.buy_power + sum(
             holding.quantity * cur_price for holding in portfolio.holdings
         )
@@ -65,6 +75,7 @@ class BackTester:
 
     def handle_buy_order(
         self,
+        _: float,
         order: CryptoOrder,
         prev_portfolio: Portfolio,
         cur_portfolio: Portfolio,
@@ -72,8 +83,8 @@ class BackTester:
         # FIXME: Implement a more efficient way of copying holdings
         cur_holdings = deepcopy(prev_portfolio.holdings)
 
-        if not self.is_zero(order.limit_price):
-            order.amount = min(order.amount, prev_portfolio.buy_power)
+        if not self.is_zero(cur_portfolio.buy_power):
+            order.amount = min(order.amount, cur_portfolio.buy_power)
             cur_portfolio.buy_power -= order.amount
             cur_holdings.append(order)
 
@@ -81,14 +92,15 @@ class BackTester:
 
     def handle_sell_order(
         self,
+        cur_price: float,
         order: CryptoOrder,
         prev_portfolio: Portfolio,
         cur_portfolio: Portfolio,
     ) -> List[CryptoOrder]:
         cur_holdings = deepcopy(prev_portfolio.holdings)
 
-        if self.get_total_amt(cur_holdings) < order.amount:
-            return
+        if self.get_total_holdings_amt(cur_price, cur_holdings) < order.amount:
+            return cur_holdings
 
         for holding in cur_holdings:
             sell_amount = min(holding.amount, order.amount)
@@ -105,8 +117,10 @@ class BackTester:
     def is_zero(self, num: float) -> bool:
         return isclose(num, 0, abs_tol=1)
 
-    def get_total_amt(self, holdings: List[CryptoOrder]) -> float:
-        return sum(holding.amount for holding in holdings)
+    def get_total_holdings_amt(
+        self, cur_price: float, holdings: List[CryptoOrder]
+    ) -> float:
+        return sum(holding.quantity * cur_price for holding in holdings)
 
     def get_data_by_interval(
         self, span: int
@@ -124,7 +138,7 @@ if __name__ == "__main__":
         currency_codes=["DOGE"],
         auto_generate_orders=True,
         max_amount_per_order=100,
-        paper_trade=True,
+        paper_trade=False,
         confirm_before_trade=False,
     )
     back_tester = BackTester(strat, "DOGE", 1000)

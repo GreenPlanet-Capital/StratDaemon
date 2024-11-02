@@ -4,7 +4,8 @@ from StratDaemon.models.crypto import (
     CryptoOrder,
     CryptoHistorical,
 )
-from pandera.typing import DataFrame
+from pandera.typing import DataFrame, Series
+
 
 class BaseBroker:
     def __init__(self) -> None:
@@ -26,7 +27,12 @@ class BaseBroker:
     ) -> CryptoOrder:
         raise NotImplementedError
 
-    def buy_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
+    def buy_crypto_market(
+        self,
+        currency_code: str,
+        amount: float,
+        cur_df: Series[CryptoHistorical] | None,
+    ) -> CryptoOrder:
         raise NotImplementedError
 
     def sell_crypto_limit(
@@ -34,5 +40,10 @@ class BaseBroker:
     ) -> CryptoOrder:
         raise NotImplementedError
 
-    def sell_crypto_market(self, currency_code: str, amount: float) -> CryptoOrder:
+    def sell_crypto_market(
+        self,
+        currency_code: str,
+        amount: float,
+        cur_df: Series[CryptoHistorical] | None,
+    ) -> CryptoOrder:
         raise NotImplementedError

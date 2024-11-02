@@ -105,8 +105,11 @@ class BaseStrategy:
                 else:
                     if print_orders:
                         print(f"Executing live {order.side} order:")
+
                     processed_orders.append(
-                        self.broker.buy_crypto_market(order.currency_code, order.amount)
+                        getattr(self.broker, f"{order.side}_crypto_market")(
+                            order.currency_code, order.amount, most_recent_data
+                        )
                     )
                 if print_orders:
                     pprint(order)
