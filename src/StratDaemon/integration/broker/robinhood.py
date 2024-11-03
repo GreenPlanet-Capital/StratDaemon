@@ -44,13 +44,12 @@ class RobinhoodBroker(BaseBroker):
     def get_crypto_latest(self, currency_code: str) -> Dict[str, Any]:
         cur_data = r.get_crypto_quote(currency_code)
         return {
-            "currency_code": currency_code,
             "open": float(cur_data["open_price"]),
             "high": float(cur_data["high_price"]),
             "close": float(cur_data["mark_price"]),
             "low": float(cur_data["low_price"]),
             "volume": float(cur_data["volume"]),
-            "timestamp": datetime.now(pytz.utc),
+            "timestamp": datetime.now(),
         }
 
     def get_crypto_historical(

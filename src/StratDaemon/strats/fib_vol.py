@@ -32,6 +32,8 @@ class FibVolStrategy(BaseStrategy):
         max_amount_per_order: float = 0.0,
         paper_trade: bool = False,
         confirm_before_trade: bool = False,
+        percent_diff_threshold: float = PERCENT_DIFF_THRESHOLD,
+        vol_window_size: int = VOL_WINDOW_SIZE,
     ) -> None:
         super().__init__(
             "fib_retracements_volatility",
@@ -44,19 +46,21 @@ class FibVolStrategy(BaseStrategy):
             paper_trade,
             confirm_before_trade,
         )
+        self.percent_diff_threshold = percent_diff_threshold
+        self.vol_window_size = vol_window_size
 
     def is_within_p_thres(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
         return (
             abs(percent_difference(df.iloc[-1].close, order.limit_price))
-            <= PERCENT_DIFF_THRESHOLD
+            <= self.percent_diff_threshold
         )
 
     def is_vol_increasing(self, df: DataFrame[CryptoHistorical]) -> bool:
         return (
-            df["close"].rolling(window=VOL_WINDOW_SIZE).mean().iloc[-1]
-            > df["close"].rolling(window=VOL_WINDOW_SIZE).mean().iloc[-2]
+            df["close"].rolling(window=self.vol_window_size).mean().iloc[-1]
+            > df["close"].rolling(window=self.vol_window_size).mean().iloc[-2]
         )
 
     def execute_buy_condition(
