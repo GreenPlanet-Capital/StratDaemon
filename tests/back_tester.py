@@ -1,5 +1,4 @@
 from typing import Generator, List
-from devtools import pprint
 from tqdm import tqdm
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
 from StratDaemon.strats.base import BaseStrategy
@@ -8,7 +7,7 @@ from test_models import Portfolio
 from fake_broker import FakeBroker
 from pandera.typing import DataFrame
 from math import isclose
-from copy import deepcopy
+import plotly.express as px
 
 DEFAULT_BROKER = FakeBroker()
 
@@ -25,10 +24,15 @@ class BackTester:
         )
         self.span = 24
 
-    def save_portfolio(self, portfolio_hist: List[Portfolio]) -> None: ...
+    def save_portfolio(self, portfolio_hist: List[Portfolio]) -> None:
+        fig = px.line(
+            x=[p.timestamp for p in portfolio_hist], y=[p.value for p in portfolio_hist]
+        )
+        fig.write_image(f"{self.currency_code}_{self.strat_name}_backtest.png")
 
     def run(self, constrict_range: int | None = None) -> List[Portfolio]:
-        portfolio_hist = [Portfolio(value=self.buy_power, buy_power=self.buy_power)]
+        portfolio_hist: List[Portfolio] = []
+        num_buy_trades = num_sell_trades = 0
         print(f"Starting with ${self.buy_power}")
 
         for df in tqdm(
@@ -40,15 +44,30 @@ class BackTester:
                 else constrict_range
             ),
         ):
+            if len(portfolio_hist) == 0:
+                portfolio_hist.append(
+                    Portfolio(
+                        value=self.buy_power,
+                        buy_power=self.buy_power,
+                        timestamp=df.iloc[-2].timestamp,
+                    )
+                )
+
             input_dt_dfs = {self.currency_code: df}
             orders = self.strat.execute(input_dt_dfs, print_orders=False)
             prev_portfolio = portfolio_hist[-1]
 
             for order in orders:
+                num_buy_trades += order.side == "buy"
+                num_sell_trades += order.side == "sell"
                 cur_portfolio = self.process_order(df, order, prev_portfolio)
                 portfolio_hist.append(cur_portfolio)
 
-        print(f"Ending with ${round(portfolio_hist[-1].value, 2)}")
+        print(
+            f"Ending with ${round(portfolio_hist[-1].value, 2)} after {num_buy_trades} "
+            f"buy trades and {num_sell_trades} sell trades over "
+            f"{round(constrict_range / self.span, 2) if constrict_range is not None else round((len(self.all_data) - self.span) / self.span, 2)} days"
+        )
         return portfolio_hist
 
     def process_order(
@@ -60,6 +79,7 @@ class BackTester:
         cur_portfolio = Portfolio(
             value=prev_portfolio.value,
             buy_power=prev_portfolio.buy_power,
+            timestamp=df.iloc[-1].timestamp,
         )
         cur_price = df.iloc[-1].close
         cur_holdings = getattr(self, f"handle_{order.side}_order")(
@@ -155,4 +175,5 @@ if __name__ == "__main__":
         confirm_before_trade=False,
     )
     back_tester = BackTester(strat, "DOGE", 1000)
-    hist = back_tester.run(constrict_range=None)
+    hist = back_tester.run(constrict_range=1_000)
+    back_tester.save_portfolio(hist)
