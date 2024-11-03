@@ -156,4 +156,4 @@ class FakeBroker(BaseBroker):
 
 if __name__ == "__main__":
     broker = FakeBroker()
-    hist = broker.get_crypto_historical("DOGE", "minute", pull_from_api=True)
+    hist = broker.get_crypto_historical("LINK", "minute", pull_from_api=True)

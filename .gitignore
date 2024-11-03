@@ -12,6 +12,7 @@ config_dev.ini
 !sample_currency_codes.txt
 *_historical_data.json
 *.png
+*.csv
 
 # Distribution / packaging
 .Python

@@ -21,6 +21,8 @@ class BackTester:
         strat: FibVolStrategy,
         currency_code: str,
         buy_power: float,
+        span: int = 30,
+        wait_time: int = 5,
         input_df: DataFrame[CryptoHistorical] | None = None,
     ) -> None:
         self.strat = strat
@@ -28,15 +30,13 @@ class BackTester:
         self.currency_code = currency_code
         self.buy_power = buy_power
         self.strat_name = self.strat.name.split("_")[0]
-        self.all_data = (
-            self.broker.get_crypto_historical(
-                self.currency_code, "hour", pull_from_api=False
-            )
-            if input_df is None
-            else input_df
+        self.all_data = self.broker.get_crypto_historical(
+            self.currency_code, "hour", pull_from_api=False
         )
-        self.span = 30
+        self.input_df = input_df
+        self.span = span
         self.transaction_fee = 0.03
+        self.wait_time = wait_time
 
     def save_portfolio(
         self, portfolio_hist: List[Portfolio], num_buy_trades: int, num_sell_trades: int
@@ -54,14 +54,15 @@ class BackTester:
         if not os.path.exists(csv_path):
             with open(csv_path, "w") as f:
                 f.write(
-                    "currency_code,strategy_name,percent_diff_threshold,"
+                    "currency_code,strategy_name,percent_diff_threshold,span,wait_time,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
                 )
 
         with open(csv_path, "a") as f:
             f.write(
                 f"{self.currency_code},{self.strat_name},"
-                f"{self.strat.percent_diff_threshold},{self.strat.vol_window_size},"
+                f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},"
+                f"{self.strat.vol_window_size},"
                 f"{portfolio_hist[-1].value},{num_buy_trades},"
                 f"{num_sell_trades}\n"
             )
@@ -69,7 +70,6 @@ class BackTester:
     def run(
         self,
         constrict_range: int | None = None,
-        wait_time: int = 0,
         save_data: bool = False,
     ) -> List[Portfolio]:
         portfolio_hist: List[Portfolio] = []
@@ -77,12 +77,12 @@ class BackTester:
         print(f"Starting with ${self.buy_power}")
 
         for df in tqdm(
-            self.get_data_by_interval(self.span, constrict_range, wait_time),
+            self.get_data_by_interval(self.span, constrict_range, self.wait_time),
             desc=f"Backtesting {self.currency_code} with {self.strat_name} strategy",
             total=(
-                (len(self.all_data) // wait_time)
+                (len(self.all_data) // self.wait_time) - self.span
                 if constrict_range is None
-                else constrict_range // wait_time
+                else constrict_range // self.wait_time
             ),
         ):
             if len(portfolio_hist) == 0:
@@ -112,6 +112,8 @@ class BackTester:
             f" making trades every {wait_time} minute"
             f" with percent_diff_threshold={self.strat.percent_diff_threshold}"
             f" and vol_window_size={self.strat.vol_window_size}"
+            f" and span={self.span}"
+            f" and wait_time={self.wait_time}"
         )
 
         if save_data:
@@ -120,18 +122,31 @@ class BackTester:
             )
         return portfolio_hist
 
+    def find_closest_price(self, dt: pd.Timestamp) -> float:
+        prev_data = self.input_df[self.input_df["timestamp"] <= dt]
+        nxt_data = self.input_df[self.input_df["timestamp"] > dt]
+
+        if len(prev_data) > 0:
+            return prev_data.iloc[-1].close
+        elif len(nxt_data) > 0:
+            return nxt_data.iloc[0].close
+
+        raise ValueError("Timestamp not found in input_df")
+
     def process_order(
         self,
         df: DataFrame[CryptoHistorical],
         order: CryptoOrder,
         prev_portfolio: Portfolio,
     ) -> Portfolio:
+        dt = df.iloc[-1].timestamp
         cur_portfolio = Portfolio(
             value=prev_portfolio.value,
             buy_power=prev_portfolio.buy_power,
-            timestamp=df.iloc[-1].timestamp,
+            timestamp=dt,
         )
-        cur_price = df.iloc[-1].close
+        # cur_price = df.iloc[-1].close
+        cur_price = self.find_closest_price(dt)
         cur_holdings = getattr(self, f"handle_{order.side}_order")(
             cur_price, order, prev_portfolio, cur_portfolio
         )
@@ -221,18 +236,23 @@ class BackTester:
 
 
 if __name__ == "__main__":
-    p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
-    # p_diff_thresholds = numeric_range(0.001, 0.01, 0.001)
+    # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
+    p_diff_thresholds = numeric_range(0.003, 0.006, 0.001)
     # vol_window_sizes = [1, 5, 10, 50]
-    vol_window_sizes = [5, 10]
-    df = pd.read_json("rh_historical_data.json")
+    vol_window_sizes = [10, 15]
+    spans = [30]
+    crypto_currency_code = "LINK"
+    wait_times = [5, 15, 30, 60]
+    df = pd.read_json(f"rh_{crypto_currency_code}_historical_data.json")
 
-    for p_diff, vol_window in itertools.product(p_diff_thresholds, vol_window_sizes):
+    for p_diff, vol_window, span, wait_time in itertools.product(
+        p_diff_thresholds, vol_window_sizes, spans, wait_times
+    ):
         strat = FibVolStrategy(
             broker=DEFAULT_BROKER,
             notif=None,
             conf=None,
-            currency_codes=["DOGE"],
+            currency_codes=[crypto_currency_code],
             auto_generate_orders=True,
             max_amount_per_order=100,
             paper_trade=False,
@@ -240,5 +260,12 @@ if __name__ == "__main__":
             percent_diff_threshold=p_diff,
             vol_window_size=vol_window,
         )
-        back_tester = BackTester(strat, "DOGE", 1_000, input_df=df)
-        back_tester.run(constrict_range=None, wait_time=1, save_data=False)
+        back_tester = BackTester(
+            strat,
+            crypto_currency_code,
+            1_000,
+            input_df=df,
+            span=span,
+            wait_time=wait_time,
+        )
+        back_tester.run(constrict_range=None, save_data=True)

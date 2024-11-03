@@ -59,8 +59,8 @@ class FibVolStrategy(BaseStrategy):
 
     def is_vol_increasing(self, df: DataFrame[CryptoHistorical]) -> bool:
         return (
-            df["close"].rolling(window=self.vol_window_size).mean().iloc[-1]
-            > df["close"].rolling(window=self.vol_window_size).mean().iloc[-2]
+            df["boll_diff"].rolling(window=self.vol_window_size).mean().iloc[-1]
+            > df["boll_diff"].rolling(window=self.vol_window_size).mean().iloc[-2]
         )
 
     def execute_buy_condition(
@@ -71,6 +71,7 @@ class FibVolStrategy(BaseStrategy):
     def execute_sell_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
+        # is vol increasing might need to be changed (safe but misses out on some opportunities)
         return self.is_within_p_thres(df, order) and self.is_vol_increasing(df)
 
     def transform_df(
@@ -96,7 +97,7 @@ class FibVolStrategy(BaseStrategy):
                 CryptoLimitOrder(
                     side="sell",
                     currency_code=currency_code,
-                    limit_price=fib_vals[min(closest_idx + 1, n - 1)],
+                    limit_price=fib_vals[min(closest_idx + 1, n - 1)], # Resistance point
                     amount=self.max_amount_per_order,
                 )
             )
@@ -105,7 +106,7 @@ class FibVolStrategy(BaseStrategy):
                 CryptoLimitOrder(
                     side="buy",
                     currency_code=currency_code,
-                    limit_price=fib_vals[max(closest_idx - 1, 0)],
+                    limit_price=fib_vals[max(closest_idx - 1, 0)], # Support point
                     amount=self.max_amount_per_order,
                 )
             )
