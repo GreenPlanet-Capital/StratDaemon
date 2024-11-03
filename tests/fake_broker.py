@@ -149,7 +149,9 @@ class FakeBroker(BaseBroker):
     def clean_data(
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
-        return df[df["volume"] != 0]
+        df = df[df["volume"] != 0]
+        df = df.drop_duplicates(subset=["timestamp"])
+        return df
 
 
 if __name__ == "__main__":

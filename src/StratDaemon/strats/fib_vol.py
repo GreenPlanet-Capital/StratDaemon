@@ -62,12 +62,12 @@ class FibVolStrategy(BaseStrategy):
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
-        return self.is_within_p_thres(df, order) # and not self.is_vol_increasing(df)
+        return self.is_within_p_thres(df, order) and not self.is_vol_increasing(df)
 
     def execute_sell_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
-        return self.is_within_p_thres(df, order) # and self.is_vol_increasing(df)
+        return self.is_within_p_thres(df, order) and self.is_vol_increasing(df)
 
     def transform_df(
         self, df: DataFrame[CryptoHistorical]

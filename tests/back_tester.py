@@ -27,14 +27,18 @@ class BackTester:
 
     def save_portfolio(self, portfolio_hist: List[Portfolio]) -> None: ...
 
-    def run(self):
+    def run(self, constrict_range: int | None = None) -> List[Portfolio]:
         portfolio_hist = [Portfolio(value=self.buy_power, buy_power=self.buy_power)]
         print(f"Starting with ${self.buy_power}")
 
         for df in tqdm(
-            self.get_data_by_interval(self.span),
+            self.get_data_by_interval(self.span, constrict_range),
             desc=f"Backtesting {self.currency_code} with {self.strat_name} strategy",
-            total=len(self.all_data) - self.span,
+            total=(
+                len(self.all_data) - self.span
+                if constrict_range is None
+                else constrict_range
+            ),
         ):
             input_dt_dfs = {self.currency_code: df}
             orders = self.strat.execute(input_dt_dfs, print_orders=False)
@@ -44,7 +48,7 @@ class BackTester:
                 cur_portfolio = self.process_order(df, order, prev_portfolio)
                 portfolio_hist.append(cur_portfolio)
 
-        print(f"Ending with ${portfolio_hist[-1].value}")
+        print(f"Ending with ${round(portfolio_hist[-1].value, 2)}")
         return portfolio_hist
 
     def process_order(
@@ -80,11 +84,13 @@ class BackTester:
         prev_portfolio: Portfolio,
         cur_portfolio: Portfolio,
     ) -> List[CryptoOrder]:
-        # FIXME: Implement a more efficient way of copying holdings
-        cur_holdings = deepcopy(prev_portfolio.holdings)
+        # FIXME: Implement a working way of copying holdings
+        cur_holdings = prev_portfolio.holdings
 
         if not self.is_zero(cur_portfolio.buy_power):
-            order.amount = min(order.amount, cur_portfolio.buy_power)
+            prev_order_amt = order.amount
+            order.amount = min(prev_order_amt, cur_portfolio.buy_power)
+            order.quantity = order.quantity * (order.amount / prev_order_amt)
             cur_portfolio.buy_power -= order.amount
             cur_holdings.append(order)
 
@@ -97,8 +103,10 @@ class BackTester:
         prev_portfolio: Portfolio,
         cur_portfolio: Portfolio,
     ) -> List[CryptoOrder]:
-        cur_holdings = deepcopy(prev_portfolio.holdings)
+        # FIXME: Implement a working way of copying holdings
+        cur_holdings = prev_portfolio.holdings
 
+        # This also updates the amount of each holding
         if self.get_total_holdings_amt(cur_price, cur_holdings) < order.amount:
             return cur_holdings
 
@@ -106,11 +114,10 @@ class BackTester:
             sell_amount = min(holding.amount, order.amount)
             holding.amount -= sell_amount
             order.amount -= sell_amount
+            cur_portfolio.buy_power += sell_amount
 
             if self.is_zero(order.amount):
                 break
-
-        cur_portfolio.buy_power += order.amount
 
         return [holding for holding in cur_holdings if not self.is_zero(holding.amount)]
 
@@ -120,13 +127,19 @@ class BackTester:
     def get_total_holdings_amt(
         self, cur_price: float, holdings: List[CryptoOrder]
     ) -> float:
-        return sum(holding.quantity * cur_price for holding in holdings)
+        s = 0
+        for holding in holdings:
+            holding.amount = holding.quantity * cur_price
+            s += holding.amount
+        return s
 
     def get_data_by_interval(
-        self, span: int
+        self, span: int, constrict_range: int | None = None
     ) -> Generator[DataFrame[CryptoHistorical], None, None]:
         # FIXME: Implement a more efficient way of getting data by interval
-        for i in range(span, len(self.all_data)):
+        n = len(self.all_data)
+        start_idx = span if constrict_range is None else n - constrict_range
+        for i in range(start_idx, n):
             yield self.all_data.iloc[i - span + 1 : i + 1]
 
 
@@ -142,5 +155,4 @@ if __name__ == "__main__":
         confirm_before_trade=False,
     )
     back_tester = BackTester(strat, "DOGE", 1000)
-    hist = back_tester.run()
-    pprint(hist[-1])
+    hist = back_tester.run(constrict_range=None)
