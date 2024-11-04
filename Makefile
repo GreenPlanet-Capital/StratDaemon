@@ -1,5 +1,10 @@
 
-run: clean
+run:
+	strat-daemon start --path-to-currency-codes examples/sample_currency_codes.txt \
+					    --paper-trade --auto-generate-orders --no-confirm-before-trade \
+						--max-amount-per-order 100 --strategy fib_vol --poll-interval 1800
+
+test: clean
 	python tests/back_tester.py
 
 clean: check_clean
