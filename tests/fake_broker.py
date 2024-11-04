@@ -11,6 +11,7 @@ from StratDaemon.utils.constants import CRYPTO_COMPARE_API_KEY
 LOCAL_DATA_PATH_SUFFIX = "historical_data.json"
 
 
+# Change to CryptoCompareBroker and move to src/StratDaemon/integration/broker/crypto_compare.py
 class FakeBroker(BaseBroker):
     def __init__(self):
         super().__init__()
@@ -72,7 +73,7 @@ class FakeBroker(BaseBroker):
         self,
         currency_code: str,
         interval: str,
-        pull_from_api: bool = False,
+        pull_from_api: bool = False,  # change this to span
     ) -> DataFrame[CryptoHistorical]:
         local_data_path = f"{currency_code}_{LOCAL_DATA_PATH_SUFFIX}"
 
@@ -84,7 +85,7 @@ class FakeBroker(BaseBroker):
 
         if pull_from_api is True:
             crypto_hist = []
-            to_timestamp = None if df.empty else df["timestamp"].min()
+            to_timestamp = None
             save_data_interval = self.save_data_interval
 
             while data := self.make_crypto_historical_req(
@@ -94,7 +95,12 @@ class FakeBroker(BaseBroker):
                     break
 
                 crypto_hist.extend(data)
-                to_timestamp = data[0]["timestamp"]
+
+                if to_timestamp is None and not df.empty:
+                    to_timestamp = df["timestamp"].min()
+                else:
+                    to_timestamp = data[0]["timestamp"]
+
                 save_data_interval -= 1
 
                 if save_data_interval <= 0:

@@ -9,7 +9,11 @@ from StratDaemon.models.crypto import (
     CryptoHistorical,
     CryptoOrder,
 )
-from StratDaemon.utils.constants import ROBINHOOD_EMAIL, ROBINHOOD_PASSWORD
+from StratDaemon.utils.constants import (
+    NUMERICAL_SPAN,
+    ROBINHOOD_EMAIL,
+    ROBINHOOD_PASSWORD,
+)
 from pandera.typing import DataFrame, Series
 
 
@@ -73,7 +77,15 @@ class RobinhoodBroker(BaseBroker):
         ]
         hist_data_parsed.append(self.get_crypto_latest(currency_code))
         df = pd.DataFrame(hist_data_parsed)
+        df = self.convert_to_backtest_compatible(df)
         return CryptoHistorical.validate(df)
+
+    def convert_to_backtest_compatible(
+        self,
+        df: DataFrame[CryptoHistorical],
+    ) -> DataFrame[CryptoHistorical]:
+        df = df[df["timestamp"].dt.second == 0]
+        return df.iloc[len(df) - NUMERICAL_SPAN :]
 
     def buy_crypto_limit(
         self, currency_code: str, amount: float, limit_price: float
