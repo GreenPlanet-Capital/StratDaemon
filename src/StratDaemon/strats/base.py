@@ -37,6 +37,7 @@ class BaseStrategy:
         self.max_amount_per_order = max_amount_per_order
         self.paper_trade = paper_trade
         self.confirm_before_trade = confirm_before_trade
+        self.amount = 0
 
     def add_limit_order(self, order: CryptoLimitOrder):
         if self.auto_generate_orders:
@@ -102,6 +103,9 @@ class BaseStrategy:
                 if self.paper_trade:
                     if print_orders:
                         print(f"Paper trading {order.side} order:")
+                    self.amount += order.amount * (-1 if order.side == "buy" else 1)
+                    print(f"Amount was changed to {self.amount}")
+
                 else:
                     if print_orders:
                         print(f"Executing live {order.side} order:")
