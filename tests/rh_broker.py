@@ -1,6 +1,6 @@
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
 
-CRYPO_CURRENCY = "LINK"
+CRYPO_CURRENCY = "DOGE"
 
 broker = RobinhoodBroker()
 df = broker.get_crypto_historical(CRYPO_CURRENCY, "hour", "week")

@@ -241,7 +241,7 @@ if __name__ == "__main__":
     # vol_window_sizes = [1, 5, 10, 50]
     vol_window_sizes = [10, 15]
     spans = [30]
-    crypto_currency_code = "LINK"
+    crypto_currency_code = "DOGE"
     wait_times = [5, 15, 30, 60]
     df = pd.read_json(f"rh_{crypto_currency_code}_historical_data.json")
 

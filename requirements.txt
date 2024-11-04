@@ -8,3 +8,6 @@ typer==0.7.0
 requests==2.31.0
 tqdm==4.66.5
 plotly==5.24.0
+numpy==1.26.4
+more_itertools
+kaleido

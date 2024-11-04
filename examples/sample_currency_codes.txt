@@ -1,3 +1,2 @@
-BTC
 DOGE
-SHIB
+LINK
