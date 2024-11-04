@@ -9,7 +9,9 @@ from StratDaemon.utils.constants import (
     DEFAULT_INDICATOR_LENGTH,
     PERCENT_DIFF_THRESHOLD,
     VOL_WINDOW_SIZE,
+    RISK_FACTOR,
 )
+import random
 import pandas as pd
 from StratDaemon.utils.funcs import percent_difference
 from StratDaemon.utils.indicators import (
@@ -66,13 +68,26 @@ class FibVolStrategy(BaseStrategy):
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
-        return self.is_within_p_thres(df, order) and not self.is_vol_increasing(df)
+        confident_signal = self.is_within_p_thres(
+            df, order
+        ) and not self.is_vol_increasing(df)
+        # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
+        risk_signal = (
+            random.random() <= RISK_FACTOR
+            and self.is_within_p_thres(df, order)
+            and self.is_vol_increasing(df)
+        )
+        return confident_signal or risk_signal
 
     def execute_sell_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
-        # is vol increasing might need to be changed (safe but misses out on some opportunities)
-        return self.is_within_p_thres(df, order) and self.is_vol_increasing(df)
+        confident_signal = self.is_within_p_thres(df, order) and self.is_vol_increasing(
+            df
+        )
+        # if vol increasing, it's safe to sell but misses out on some opportunities
+        # so randomly decide to take the risk and hold
+        return confident_signal and random.random() > RISK_FACTOR
 
     def transform_df(
         self, df: DataFrame[CryptoHistorical]
@@ -97,7 +112,9 @@ class FibVolStrategy(BaseStrategy):
                 CryptoLimitOrder(
                     side="sell",
                     currency_code=currency_code,
-                    limit_price=fib_vals[min(closest_idx + 1, n - 1)], # Resistance point
+                    limit_price=fib_vals[
+                        min(closest_idx + 1, n - 1)
+                    ],  # Resistance point
                     amount=self.max_amount_per_order,
                 )
             )
@@ -106,7 +123,7 @@ class FibVolStrategy(BaseStrategy):
                 CryptoLimitOrder(
                     side="buy",
                     currency_code=currency_code,
-                    limit_price=fib_vals[max(closest_idx - 1, 0)], # Support point
+                    limit_price=fib_vals[max(closest_idx - 1, 0)],  # Support point
                     amount=self.max_amount_per_order,
                 )
             )
