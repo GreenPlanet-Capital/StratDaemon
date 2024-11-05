@@ -174,8 +174,8 @@ class BackTester:
             prev_order_amt = order.amount
             order.amount = min(prev_order_amt, cur_portfolio.buy_power)
             order.amount = order.amount * (1 - self.transaction_fee)
-            order.quantity = order.quantity * (order.amount / prev_order_amt)
-            cur_portfolio.buy_power -= order.amount
+            order.quantity *= order.amount / prev_order_amt
+            cur_portfolio.buy_power -= prev_order_amt
             cur_holdings.append(order)
             self.num_buy_trades += 1
 
