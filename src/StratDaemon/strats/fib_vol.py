@@ -50,6 +50,10 @@ class FibVolStrategy(BaseStrategy):
         )
         self.percent_diff_threshold = percent_diff_threshold
         self.vol_window_size = vol_window_size
+        self.random_number = None
+
+    def update_random_number(self):
+        self.random_number = random.random()
 
     def is_within_p_thres(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
@@ -73,7 +77,7 @@ class FibVolStrategy(BaseStrategy):
         ) and not self.is_vol_increasing(df)
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
         risk_signal = (
-            random.random() <= RISK_FACTOR
+            self.random_number <= RISK_FACTOR
             and self.is_within_p_thres(df, order)
             and self.is_vol_increasing(df)
         )
@@ -87,7 +91,7 @@ class FibVolStrategy(BaseStrategy):
         )
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so randomly decide to take the risk and hold
-        return confident_signal and random.random() > RISK_FACTOR
+        return confident_signal and self.random_number > RISK_FACTOR
 
     def transform_df(
         self, df: DataFrame[CryptoHistorical]
@@ -100,32 +104,26 @@ class FibVolStrategy(BaseStrategy):
     def get_auto_generated_orders(
         self, currency_code: str, df: DataFrame[CryptoHistorical]
     ) -> List[CryptoLimitOrder]:
+        self.update_random_number()
         sr = df.iloc[-1]
 
         fib_vals = sorted(sr.filter(like="fib_").values)
         n = len(fib_vals)
         closest_idx = (fib_vals - sr.close).argmin()
 
-        orders = []
-        if sr.trends_upwards:
-            orders.append(
-                CryptoLimitOrder(
-                    side="sell",
-                    currency_code=currency_code,
-                    limit_price=fib_vals[
-                        min(closest_idx + 1, n - 1)
-                    ],  # Resistance point
-                    amount=self.max_amount_per_order,
-                )
-            )
-        else:
-            orders.append(
-                CryptoLimitOrder(
-                    side="buy",
-                    currency_code=currency_code,
-                    limit_price=fib_vals[max(closest_idx - 1, 0)],  # Support point
-                    amount=self.max_amount_per_order,
-                )
-            )
+        orders = [
+            CryptoLimitOrder(
+                side="sell",
+                currency_code=currency_code,
+                limit_price=fib_vals[min(closest_idx + 1, n - 1)],  # Resistance point
+                amount=self.max_amount_per_order,
+            ),
+            CryptoLimitOrder(
+                side="buy",
+                currency_code=currency_code,
+                limit_price=fib_vals[max(closest_idx - 1, 0)],  # Support point
+                amount=self.max_amount_per_order,
+            ),
+        ]
 
         return orders
