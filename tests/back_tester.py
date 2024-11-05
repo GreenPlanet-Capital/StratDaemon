@@ -35,7 +35,7 @@ class BackTester:
         )
         self.input_df = input_df
         self.span = span
-        self.transaction_fee = 0.03
+        self.transaction_fee = 0
         self.wait_time = wait_time
 
     def save_portfolio(
