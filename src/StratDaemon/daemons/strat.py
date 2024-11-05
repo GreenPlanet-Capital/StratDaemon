@@ -1,3 +1,4 @@
+import traceback
 from StratDaemon.daemons.base import BaseDaemon
 from StratDaemon.strats.base import BaseStrategy
 
@@ -16,6 +17,6 @@ class StratDaemon(BaseDaemon):
         )
         try:
             self.strat.execute()
-        except Exception as e:
-            print(f"Error executing strategy: {e}")
+        except Exception as _:
+            print(f"Error executing strategy: {traceback.format_exc()}")
         print("Strategy executed.")
