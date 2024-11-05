@@ -54,14 +54,14 @@ class BackTester:
         if not os.path.exists(csv_path):
             with open(csv_path, "w") as f:
                 f.write(
-                    "currency_code,strategy_name,percent_diff_threshold,span,wait_time,"
+                    "currency_code,strategy_name,percent_diff_threshold,span,wait_time,risk_factor,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
                 )
 
         with open(csv_path, "a") as f:
             f.write(
                 f"{self.currency_code},{self.strat_name},"
-                f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},"
+                f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
                 f"{self.strat.vol_window_size},"
                 f"{portfolio_hist[-1].value},{num_buy_trades},"
                 f"{num_sell_trades}\n"
@@ -114,6 +114,7 @@ class BackTester:
             f" and vol_window_size={self.strat.vol_window_size}"
             f" and span={self.span}"
             f" and wait_time={self.wait_time}"
+            f" and risk_factor={self.strat.risk_factor}"
         )
 
         if save_data:
@@ -123,12 +124,9 @@ class BackTester:
         return portfolio_hist
 
     def find_closest_price(self, dt: pd.Timestamp) -> float:
-        prev_data = self.input_df[self.input_df["timestamp"] <= dt]
-        nxt_data = self.input_df[self.input_df["timestamp"] > dt]
+        nxt_data = self.input_df[self.input_df["timestamp"] >= dt]
 
-        if len(prev_data) > 0:
-            return prev_data.iloc[-1].close
-        elif len(nxt_data) > 0:
+        if len(nxt_data) > 0:
             return nxt_data.iloc[0].close
 
         raise ValueError("Timestamp not found in input_df")
@@ -237,16 +235,22 @@ class BackTester:
 
 if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
-    p_diff_thresholds = numeric_range(0.003, 0.006, 0.001)
+    # p_diff_thresholds = numeric_range(0.003, 0.006, 0.001)
+    p_diff_thresholds = [0.005]
     # vol_window_sizes = [1, 5, 10, 50]
-    vol_window_sizes = [10, 15]
+    vol_window_sizes = [10]
     spans = [30]
     crypto_currency_code = "DOGE"
-    wait_times = [5, 15, 30, 60]
+    wait_times = [15]
+    # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
+    #     numeric_range(0.3, 0.6, 0.1))
+    risk_factors = [0.1]
+    buy_power = 1_000
+
     df = pd.read_json(f"rh_{crypto_currency_code}_historical_data.json")
 
-    for p_diff, vol_window, span, wait_time in itertools.product(
-        p_diff_thresholds, vol_window_sizes, spans, wait_times
+    for p_diff, vol_window, span, wait_time, risk_factor in itertools.product(
+        p_diff_thresholds, vol_window_sizes, spans, wait_times, risk_factors
     ):
         strat = FibVolStrategy(
             broker=DEFAULT_BROKER,
@@ -259,11 +263,13 @@ if __name__ == "__main__":
             confirm_before_trade=False,
             percent_diff_threshold=p_diff,
             vol_window_size=vol_window,
+            risk_factor=risk_factor,
+            buy_power=buy_power,
         )
         back_tester = BackTester(
             strat,
             crypto_currency_code,
-            1_000,
+            buy_power,
             input_df=df,
             span=span,
             wait_time=wait_time,

@@ -6,10 +6,11 @@ from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.models.crypto import CryptoHistorical, CryptoLimitOrder
 from pandera.typing import DataFrame
 from StratDaemon.utils.constants import (
+    BUY_POWER,
     DEFAULT_INDICATOR_LENGTH,
     PERCENT_DIFF_THRESHOLD,
-    VOL_WINDOW_SIZE,
     RISK_FACTOR,
+    VOL_WINDOW_SIZE,
 )
 import random
 import pandas as pd
@@ -36,6 +37,8 @@ class FibVolStrategy(BaseStrategy):
         confirm_before_trade: bool = False,
         percent_diff_threshold: float = PERCENT_DIFF_THRESHOLD,
         vol_window_size: int = VOL_WINDOW_SIZE,
+        risk_factor: float = RISK_FACTOR,
+        buy_power: float = BUY_POWER,
     ) -> None:
         super().__init__(
             "fib_retracements_volatility",
@@ -47,6 +50,8 @@ class FibVolStrategy(BaseStrategy):
             max_amount_per_order,
             paper_trade,
             confirm_before_trade,
+            risk_factor,
+            buy_power,
         )
         self.percent_diff_threshold = percent_diff_threshold
         self.vol_window_size = vol_window_size
@@ -77,7 +82,7 @@ class FibVolStrategy(BaseStrategy):
         ) and not self.is_vol_increasing(df)
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
         risk_signal = (
-            self.random_number <= RISK_FACTOR
+            self.random_number <= self.risk_factor
             and self.is_within_p_thres(df, order)
             and self.is_vol_increasing(df)
         )
@@ -91,7 +96,7 @@ class FibVolStrategy(BaseStrategy):
         )
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so randomly decide to take the risk and hold
-        return confident_signal and self.random_number > RISK_FACTOR
+        return confident_signal and self.random_number > self.risk_factor
 
     def transform_df(
         self, df: DataFrame[CryptoHistorical]

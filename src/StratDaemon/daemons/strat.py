@@ -14,5 +14,8 @@ class StratDaemon(BaseDaemon):
             f"Executing strategy {self.strat.name} with {"paper" if self.strat.paper_trade else "live"} trading"
             f" and {'auto-generating orders' if self.strat.auto_generate_orders else 'without auto-generating orders'}."
         )
-        self.strat.execute()
+        try:
+            self.strat.execute()
+        except Exception as e:
+            print(f"Error executing strategy: {e}")
         print("Strategy executed.")

@@ -7,10 +7,12 @@ from pandera.typing import DataFrame, Series
 from devtools import pprint
 import time
 from StratDaemon.utils.constants import (
+    BUY_POWER,
     HISTORICAL_INTERVAL,
     HISTORICAL_SPAN,
     MAX_POLL_COUNT,
     POLL_INTERVAL_SEC,
+    RISK_FACTOR,
 )
 
 
@@ -26,6 +28,8 @@ class BaseStrategy:
         max_amount_per_order: float = 0.0,
         paper_trade: bool = False,
         confirm_before_trade: bool = False,
+        risk_factor: float = RISK_FACTOR,
+        buy_power: float = BUY_POWER,
     ) -> None:
         self.name = name
         self.broker = broker
@@ -37,7 +41,8 @@ class BaseStrategy:
         self.max_amount_per_order = max_amount_per_order
         self.paper_trade = paper_trade
         self.confirm_before_trade = confirm_before_trade
-        self.amount = 0
+        self.risk_factor = risk_factor
+        self.buy_power = self.initial_buy_power = buy_power
 
     def add_limit_order(self, order: CryptoLimitOrder):
         if self.auto_generate_orders:
@@ -100,16 +105,22 @@ class BaseStrategy:
                         continue
                     print("Confirmation received, proceeding with order.")
 
+                if (order.side == "buy" and self.buy_power >= order.amount) or (
+                    order.side == "sell" and self.initial_buy_power > self.buy_power
+                ):
+                    self.buy_power += order.amount * (-1 if order.side == "buy" else 1)
+                else:
+                    if print_orders:
+                        print(f"Insufficient funds to execute {order.side} order.")
+                    continue
+                print(f"Remaining buy power: {self.buy_power}")
                 if self.paper_trade:
                     if print_orders:
                         print(f"Paper trading {order.side} order:")
-                    self.amount += order.amount * (-1 if order.side == "buy" else 1)
-                    print(f"Amount was changed to {self.amount}")
-
                 else:
                     if print_orders:
                         print(f"Executing live {order.side} order:")
-                    # TODO: implement starting buy power
+
                     processed_orders.append(
                         getattr(self.broker, f"{order.side}_crypto_market")(
                             order.currency_code, order.amount, most_recent_data
