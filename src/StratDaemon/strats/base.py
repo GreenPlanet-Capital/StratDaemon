@@ -110,12 +110,13 @@ class BaseStrategy:
                 ):
                     self.buy_power += order.amount * (-1 if order.side == "buy" else 1)
                 else:
-                    # if print_orders:
-                    print(f"Insufficient funds to execute {order.side} order.")
+                    if print_orders:
+                        print(f"Insufficient funds to execute {order.side} order.")
                     continue
 
-                # if print_orders:
-                print(f"Remaining buy power: {self.buy_power}")
+                if print_orders:
+                    print(f"Remaining buy power: {self.buy_power}")
+
                 if self.paper_trade:
                     if print_orders:
                         print(f"Paper trading {order.side} order:")
