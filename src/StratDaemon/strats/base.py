@@ -8,10 +8,10 @@ from devtools import pprint
 import time
 from StratDaemon.utils.constants import (
     BUY_POWER,
-    HISTORICAL_INTERVAL,
-    HISTORICAL_SPAN,
     MAX_POLL_COUNT,
     POLL_INTERVAL_SEC,
+    RH_HISTORICAL_INTERVAL,
+    RH_HISTORICAL_SPAN,
     RISK_FACTOR,
 )
 
@@ -62,7 +62,7 @@ class BaseStrategy:
                 df = dt_dfs_input[currency_code]
             else:
                 df = self.broker.get_crypto_historical(
-                    currency_code, HISTORICAL_INTERVAL, HISTORICAL_SPAN
+                    currency_code, RH_HISTORICAL_INTERVAL, RH_HISTORICAL_SPAN
                 )
             df = self.transform_df(df)
             dt_dfs[currency_code] = df

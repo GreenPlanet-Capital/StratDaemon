@@ -10,6 +10,7 @@ from StratDaemon.models.crypto import (
     CryptoOrder,
 )
 from StratDaemon.utils.constants import (
+    CRYPTO_COMPARE_HISTORICAL_INTERVAL,
     NUMERICAL_SPAN,
     ROBINHOOD_EMAIL,
     ROBINHOOD_PASSWORD,
@@ -71,7 +72,7 @@ class RobinhoodBroker(BaseBroker):
             )
             print("Falling back to CryptoCompare API.")
             df = self.fallback_broker.get_crypto_historical(
-                currency_code, interval, pull_from_api=True
+                currency_code, CRYPTO_COMPARE_HISTORICAL_INTERVAL, pull_from_api=True
             )
         else:
             hist_data_parsed = [

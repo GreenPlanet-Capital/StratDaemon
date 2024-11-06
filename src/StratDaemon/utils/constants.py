@@ -8,8 +8,6 @@ cfg_parser.read(CONFIG_FILE)
 ROBINHOOD_EMAIL = cfg_parser.get("robinhood", "email")
 ROBINHOOD_PASSWORD = cfg_parser.get("robinhood", "password")
 
-HISTORICAL_INTERVAL = cfg_parser.get("broker", "historical_interval")
-HISTORICAL_SPAN = cfg_parser.get("broker", "historical_span")
 
 CARRIER_MAP = {
     "verizon": "vtext.com",
@@ -34,6 +32,11 @@ CRYPTO_DB_URL = "https://comerciohub.tech/api/crypto"
 
 POLL_INTERVAL_SEC = cfg_parser.getint("confirmation", "polling_interval_sec")
 MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count")
+
+RH_HISTORICAL_INTERVAL = "15second"
+RH_HISTORICAL_SPAN = "hour"
+
+CRYPTO_COMPARE_HISTORICAL_INTERVAL = "minute"
 
 DEFAULT_INDICATOR_LENGTH = 14
 FIB_VALUES = [2.168, 2, 1.618, 1.382, 1, 0.618]
