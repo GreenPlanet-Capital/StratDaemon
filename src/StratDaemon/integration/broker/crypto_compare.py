@@ -11,7 +11,7 @@ from StratDaemon.utils.constants import CRYPTO_COMPARE_API_KEY
 LOCAL_DATA_PATH_SUFFIX = "historical_data.json"
 
 
-class FakeBroker(BaseBroker):
+class CryptoCompareBroker(BaseBroker):
     def __init__(self):
         super().__init__()
         self.hist_base_url = "https://min-api.cryptocompare.com/data/histo"
@@ -158,8 +158,3 @@ class FakeBroker(BaseBroker):
         df = df[df["volume"] != 0]
         df = df.drop_duplicates(subset=["timestamp"])
         return df
-
-
-if __name__ == "__main__":
-    broker = FakeBroker()
-    hist = broker.get_crypto_historical("DOGE", "minute", pull_from_api=True)

@@ -5,14 +5,14 @@ from tqdm import tqdm
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
 from StratDaemon.strats.fib_vol import FibVolStrategy
 from test_models import Portfolio
-from fake_broker import FakeBroker
+from StratDaemon.integration.broker.crypto_compare import CryptoCompareBroker
 from pandera.typing import DataFrame
 from math import isclose
 import plotly.express as px
 import os
 from more_itertools import numeric_range
 
-DEFAULT_BROKER = FakeBroker()
+DEFAULT_BROKER = CryptoCompareBroker()
 
 
 class BackTester:
