@@ -2,7 +2,7 @@
 run:
 	strat-daemon start --path-to-currency-codes examples/sample_currency_codes.txt \
 					    --no-paper-trade --auto-generate-orders --no-confirm-before-trade \
-						--max-amount-per-order 50 --strategy fib_vol --poll-interval 900
+						--max-amount-per-order 100 --strategy fib_vol --poll-interval 900
 
 test: clean
 	python tests/back_tester.py
