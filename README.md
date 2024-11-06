@@ -55,3 +55,7 @@ strat-daemon start --path-to-orders examples/sample_orders.json --path-to-curren
 - You might have to enter Robinhood's 2FA code if you are running this for the first time.
 
 - If you are using Gmail notif integration, you would need to generate an App Password for authentication. You can do this by visiting [Google App Passwords](https://myaccount.google.com/apppasswords). `config.ini` should be updated with the generated password.
+
+### Improvements
+
+- ML model to give confidence score based on past data whether it's a resistance or support level

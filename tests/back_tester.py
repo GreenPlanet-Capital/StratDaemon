@@ -1,3 +1,4 @@
+from datetime import datetime
 import itertools
 from typing import Generator, List
 import pandas as pd
@@ -104,6 +105,17 @@ class BackTester:
             for order in orders:
                 cur_portfolio = self.process_order(df, order, prev_portfolio)
                 portfolio_hist.append(cur_portfolio)
+
+        cur_portfolio = Portfolio(
+            timestamp=datetime.now(),
+            value=prev_portfolio.value,
+            buy_power=prev_portfolio.buy_power,
+            holdings=prev_portfolio.holdings,
+        )
+        cur_portfolio.value = self.calculate_portfolio_value(
+            cur_portfolio, self.input_df.iloc[-1].close
+        )
+        portfolio_hist.append(cur_portfolio)
 
         print(
             f"Ending with ${round(portfolio_hist[-1].value, 2)} after {self.num_buy_trades} "
