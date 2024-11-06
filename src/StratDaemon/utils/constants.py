@@ -30,8 +30,10 @@ CRYPTO_COMPARE_API_KEY = cfg_parser.get("tests", "crypto_compare_api_key")
 
 CRYPTO_DB_URL = "https://comerciohub.tech/api/crypto"
 
-POLL_INTERVAL_SEC = cfg_parser.getint("confirmation", "polling_interval_sec")
-MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count")
+POLL_INTERVAL_SEC = cfg_parser.getint(
+    "confirmation", "polling_interval_sec", fallback=5
+)
+MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count", fallback=10)
 
 RH_HISTORICAL_INTERVAL = "15second"
 RH_HISTORICAL_SPAN = "hour"
