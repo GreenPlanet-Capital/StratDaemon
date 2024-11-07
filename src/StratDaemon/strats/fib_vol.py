@@ -86,9 +86,7 @@ class FibVolStrategy(BaseStrategy):
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
         risk_signal = (
             self.random_number <= self.risk_factor
-            and self.is_within_p_thres(
-                df, order, self.percent_diff_threshold
-            )
+            and self.is_within_p_thres(df, order, self.percent_diff_threshold)
             and self.is_vol_increasing(df)
         )
         return confident_signal or risk_signal
