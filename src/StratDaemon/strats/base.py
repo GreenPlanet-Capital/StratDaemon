@@ -51,7 +51,7 @@ class BaseStrategy:
             )
         self.limit_orders.append(order)
 
-    def construct_dt_df(
+    def construct_dt_dfs(
         self, dt_dfs_input: Dict[str, DataFrame[CryptoHistorical]] | None
     ) -> Dict[str, DataFrame[CryptoHistorical]]:
         currency_codes = {order.currency_code for order in self.limit_orders}
@@ -73,7 +73,7 @@ class BaseStrategy:
         dt_dfs_input: Dict[str, DataFrame[CryptoHistorical]] | None = None,
         print_orders: bool = True,
     ) -> List[CryptoOrder]:
-        dt_dfs = self.construct_dt_df(dt_dfs_input)
+        dt_dfs = self.construct_dt_dfs(dt_dfs_input)
         processed_orders = []
 
         orders_to_process = self.limit_orders.copy()

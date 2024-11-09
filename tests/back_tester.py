@@ -12,6 +12,8 @@ from math import isclose
 import plotly.express as px
 import os
 from more_itertools import numeric_range
+import numpy as np
+from collections import Counter
 
 DEFAULT_BROKER = CryptoCompareBroker()
 
@@ -37,12 +39,32 @@ class BackTester:
             )
             for currency_code in self.currency_codes
         ]
+        self.ensure_data_dfs_consistent()
         self.input_dt_dfs = input_dt_dfs
         self.span = span
         self.transaction_fee = 0
         self.wait_time = wait_time
+        self.sanity_checks()
 
-    def ensure_data_dfs_consistent(self) -> None: ...
+    def sanity_checks(self) -> None:
+        assert len(self.currency_codes) == len(
+            self.all_data_dfs
+        ), "Currency codes and data must be of the same length"
+        assert len(self.currency_codes) == len(
+            self.input_dt_dfs
+        ), "Currency codes and input data must be of the same length"
+        assert all(
+            len(df) == len(self.all_data_dfs[0]) for df in self.all_data_dfs
+        ), "All dataframes must have the same length in all_data_dfs"
+
+    def ensure_data_dfs_consistent(self) -> None:
+        dates = self.all_data_dfs[0].timestamp
+        for df in self.all_data_dfs[1:]:
+            cur_dates = df.timestamp
+            dates = np.intersect1d(dates, cur_dates)
+
+        for i, df in enumerate(self.all_data_dfs):
+            self.all_data_dfs[i] = df[df.timestamp.isin(dates)]
 
     def save_portfolio(
         self, portfolio_hist: List[Portfolio], num_buy_trades: int, num_sell_trades: int
@@ -77,6 +99,7 @@ class BackTester:
         self,
         constrict_range: int | None = None,
         save_data: bool = False,
+        debug: bool = False,
     ) -> List[Portfolio]:
         portfolio_hist: List[Portfolio] = []
         self.num_buy_trades = self.num_sell_trades = 0
@@ -99,15 +122,22 @@ class BackTester:
                         timestamp=dfs[0].iloc[-2].timestamp,
                     )
                 )
+            assert all(
+                len(df) == len(dfs[0]) == self.span for df in dfs
+            ), "All dataframes must have the same length as the span"
 
-            import pdb
+            input_dt_dfs = {
+                currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
+            }
+            orders = self.strat.execute(input_dt_dfs, print_orders=debug)
 
-            pdb.set_trace()
-            input_dt_dfs = list(zip(self.currency_codes, dfs))
-            orders = self.strat.execute(input_dt_dfs, print_orders=False)
-            assert (
-                len(orders) <= 1
+            cnts = Counter()
+            for order in orders:
+                cnts[order.currency_code] += 1
+            assert all(
+                cnt <= 1 for cnt in cnts.values()
             ), "Only one order (or none) should be generated per interval"
+
             prev_portfolio = portfolio_hist[-1]
 
             for order in orders:
@@ -154,7 +184,7 @@ class BackTester:
         if len(nxt_data) > 0:
             return nxt_data.iloc[0].close
 
-        raise ValueError("Timestamp not found in input_df")
+        raise ValueError(f"Timestamp {dt} not found for {currency_code}")
 
     def process_order(
         self,
@@ -268,15 +298,15 @@ class BackTester:
 if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
     # p_diff_thresholds = numeric_range(0.003, 0.006, 0.001)
-    p_diff_thresholds = [0.1]
+    p_diff_thresholds = [0.005]
     # vol_window_sizes = [1, 5, 10, 50]
     vol_window_sizes = [10]
     spans = [30]
-    crypto_currency_codes = ["DOGE", "SHIB", "ETH", "LINK"]
+    crypto_currency_codes = ["DOGE", "SHIB", "ETH"]
     wait_times = [15]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
-    risk_factors = [0.5]
+    risk_factors = [0.1]
     buy_power = 1_000
 
     input_dt_dfs = {
@@ -311,4 +341,4 @@ if __name__ == "__main__":
             span=span,
             wait_time=wait_time,
         )
-        back_tester.run(constrict_range=24 * 60, save_data=True)
+        back_tester.run(constrict_range=24 * 60, save_data=True, debug=False)
