@@ -197,7 +197,7 @@ class BackTester:
             f"Ending with ${round(portfolio_hist[-1].value, 2)} after {self.num_buy_trades} "
             f"buy trades and {self.num_sell_trades} sell trades over "
             f"{constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes"
-            f" making trades every {wait_time} minute"
+            f" making trades every {wait_time} minutes"
             f" with percent_diff_threshold={self.strat.percent_diff_threshold}"
             f" and vol_window_size={self.strat.vol_window_size}"
             f" and span={self.span}"

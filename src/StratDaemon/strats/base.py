@@ -43,6 +43,7 @@ class BaseStrategy:
         self.confirm_before_trade = confirm_before_trade
         self.risk_factor = risk_factor
         self.buy_power = self.initial_buy_power = buy_power
+        self.holdings = {currency_code: 0.0 for currency_code in currency_codes}
 
     def add_limit_order(self, order: CryptoLimitOrder):
         if self.auto_generate_orders:
@@ -105,11 +106,17 @@ class BaseStrategy:
                         continue
                     print("Confirmation received, proceeding with order.")
 
+                currency_code = order.currency_code
                 buy_power = self.buy_power
+                cur_holding = self.holdings[currency_code]
                 if (order.side == "buy" and buy_power >= order.amount) or (
-                    order.side == "sell" and self.initial_buy_power > buy_power
+                    order.side == "sell"
+                    and self.initial_buy_power > buy_power
+                    and cur_holding >= order.amount
                 ):
-                    buy_power += order.amount * (-1 if order.side == "buy" else 1)
+                    negate = -1 if order.side == "buy" else 1
+                    buy_power += order.amount * negate
+                    cur_holding += order.amount * -negate
                 else:
                     if print_orders:
                         print(f"Insufficient funds to execute {order.side} order.")
@@ -129,8 +136,10 @@ class BaseStrategy:
                     )
 
                 self.buy_power = buy_power
+                self.holdings[order.currency_code] = cur_holding
                 if print_orders:
                     print(f"Remaining buy power: {self.buy_power}")
+                    print(f"Current holdings for {currency_code}: {cur_holding}")
 
                 if print_orders:
                     pprint(order)
