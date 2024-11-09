@@ -1,6 +1,7 @@
 from datetime import datetime
 import itertools
 from typing import Generator, List, Dict
+from devtools import pprint
 import pandas as pd
 from tqdm import tqdm
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
@@ -13,7 +14,7 @@ import plotly.express as px
 import os
 from more_itertools import numeric_range
 import numpy as np
-from collections import Counter
+from collections import Counter, defaultdict
 
 DEFAULT_BROKER = CryptoCompareBroker()
 
@@ -95,6 +96,38 @@ class BackTester:
                 f"{num_sell_trades}\n"
             )
 
+    def print_agg_holdings(
+        self, orders: List[CryptoOrder], cur_prices_dt: Dict[str, float]
+    ) -> None:
+        holdings = defaultdict(
+            lambda: {
+                "amount": 0,
+                "average_price": 0,
+                "num_buy_orders": 0,
+            }
+        )
+        for order in orders:
+            cur_holding = holdings[order.currency_code]
+            amount = (
+                cur_prices_dt[order.currency_code] * order.quantity
+                if order.side == "buy"
+                else -order.amount
+            )
+            cur_holding["amount"] += amount
+            if order.side == "buy":
+                cur_holding["average_price"] += order.asset_price
+                cur_holding["num_buy_orders"] += 1
+
+        def safe_div(a: float, b: float) -> float:
+            return a / b if b != 0 else 0
+
+        for _, holding in holdings.items():
+            holding["average_price"] = safe_div(
+                holding["average_price"], holding["num_buy_orders"]
+            )
+
+        pprint(dict(holdings))
+
     def run(
         self,
         constrict_range: int | None = None,
@@ -150,19 +183,20 @@ class BackTester:
             buy_power=prev_portfolio.buy_power,
             holdings=prev_portfolio.holdings,
         )
+        cur_prices_dt = {
+            currency_code: self.input_dt_dfs[currency_code].iloc[-1].close
+            for currency_code in self.currency_codes
+        }
         cur_portfolio.value = self.calculate_portfolio_value(
             cur_portfolio,
-            {
-                currency_code: self.input_dt_dfs[currency_code].iloc[-1].close
-                for currency_code in self.currency_codes
-            },
+            cur_prices_dt,
         )
         portfolio_hist.append(cur_portfolio)
 
         print(
             f"Ending with ${round(portfolio_hist[-1].value, 2)} after {self.num_buy_trades} "
             f"buy trades and {self.num_sell_trades} sell trades over "
-            f"{constrict_range if constrict_range is not None else len(self.all_data) - self.span} minutes"
+            f"{constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes"
             f" making trades every {wait_time} minute"
             f" with percent_diff_threshold={self.strat.percent_diff_threshold}"
             f" and vol_window_size={self.strat.vol_window_size}"
@@ -170,6 +204,8 @@ class BackTester:
             f" and wait_time={self.wait_time}"
             f" and risk_factor={self.strat.risk_factor}"
         )
+
+        self.print_agg_holdings(portfolio_hist[-1].holdings, cur_prices_dt)
 
         if save_data:
             self.save_portfolio(
@@ -341,4 +377,4 @@ if __name__ == "__main__":
             span=span,
             wait_time=wait_time,
         )
-        back_tester.run(constrict_range=24 * 60, save_data=True, debug=False)
+        back_tester.run(constrict_range=None, save_data=True, debug=False)
