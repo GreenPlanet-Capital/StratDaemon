@@ -1,6 +1,6 @@
 
 run:
-	strat-daemon start --path-to-currency-codes examples/crypto.txt \
+	strat-daemon start --path-to-currency-codes examples/sample_currencies.txt \
 					    --no-paper-trade --auto-generate-orders --no-confirm-before-trade \
 						--max-amount-per-order 100 --strategy fib_vol --poll-interval 900
 
