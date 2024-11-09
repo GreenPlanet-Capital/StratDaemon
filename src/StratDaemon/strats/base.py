@@ -125,7 +125,9 @@ class BaseStrategy:
                     cur_holding += order.amount * -negate
                 else:
                     if print_orders:
-                        print(f"Insufficient funds to execute {order.side} order.")
+                        print(
+                            f"Insufficient funds or holdings to execute {order.side} order."
+                        )
                     continue
 
                 if self.paper_trade:
