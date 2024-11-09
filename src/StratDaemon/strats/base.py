@@ -45,6 +45,12 @@ class BaseStrategy:
         self.buy_power = self.initial_buy_power = buy_power
         self.holdings = {currency_code: 0.0 for currency_code in currency_codes}
 
+    def init(self) -> None:
+        print(
+            f"Initialized {self.name} strategy with {self.buy_power} buy power and {self.max_amount_per_order} max amount per order"
+        )
+        pprint(self.holdings)
+
     def add_limit_order(self, order: CryptoLimitOrder):
         if self.auto_generate_orders:
             print(

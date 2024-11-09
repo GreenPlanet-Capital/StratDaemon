@@ -23,6 +23,7 @@ app = typer.Typer()
 def start(
     strategy: Annotated[str, typer.Option("--strategy", "-s")] = "rsi",
     path_to_orders: Annotated[str, typer.Option("--path-to-orders", "-pto")] = None,
+    path_to_holdings: Annotated[str, typer.Option("--path-to-holdings", "-pth")] = None,
     integration: Annotated[str, typer.Option("--integration", "-i")] = "robinhood",
     notification: Annotated[str, typer.Option("--notification", "-n")] = "sms",
     confirmation: Annotated[str, typer.Option("--confirmation", "-c")] = "crypto_db",
@@ -101,6 +102,14 @@ def start(
         confirm_before_trade,
     )
 
+    if path_to_holdings is not None:
+        if not os.path.exists(path_to_holdings):
+            raise typer.Exit(f"Path to holdings does not exist: {path_to_holdings}")
+        with open(path_to_holdings, "r") as f:
+            holdings = json.load(f)
+        for holding in holdings:
+            strat.holdings[holding["currency_code"]] = holding["amount"]
+
     if path_to_orders is not None:
         if not os.path.exists(path_to_orders):
             raise typer.Exit(f"Path to orders does not exist: {path_to_orders}")
@@ -109,6 +118,7 @@ def start(
             for order in orders:
                 strat.add_limit_order(CryptoLimitOrder(**order))
 
+    strat.init()
     daemon = StratDaemon(strat, poll_interval, poll_on_start)
     asyncio.run(daemon.start())
 
