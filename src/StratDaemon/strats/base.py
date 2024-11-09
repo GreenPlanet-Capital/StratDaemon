@@ -115,6 +115,7 @@ class BaseStrategy:
                 currency_code = order.currency_code
                 buy_power = self.buy_power
                 cur_holding = self.holdings[currency_code]
+
                 if (order.side == "buy" and buy_power >= order.amount) or (
                     order.side == "sell"
                     and self.initial_buy_power > buy_power
@@ -143,14 +144,14 @@ class BaseStrategy:
                         )
                     )
 
+                if print_orders:
+                    pprint(order)
+
                 self.buy_power = min(buy_power, self.initial_buy_power)
                 self.holdings[order.currency_code] = cur_holding
                 if print_orders:
                     print(f"Remaining buy power: {self.buy_power}")
                     print(f"Current holdings for {currency_code}: {cur_holding}")
-
-                if print_orders:
-                    pprint(order)
 
         return processed_orders
 
