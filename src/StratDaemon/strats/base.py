@@ -141,7 +141,7 @@ class BaseStrategy:
                         )
                     )
 
-                self.buy_power = buy_power
+                self.buy_power = max(buy_power, self.initial_buy_power)
                 self.holdings[order.currency_code] = cur_holding
                 if print_orders:
                     print(f"Remaining buy power: {self.buy_power}")

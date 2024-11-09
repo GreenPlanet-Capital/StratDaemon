@@ -2,5 +2,9 @@
     {
         "currency_code": "DOGE",
         "amount": 100
+    },
+    {
+        "currency_code": "ETH",
+        "amount": 100
     }
 ]
