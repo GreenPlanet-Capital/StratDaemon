@@ -94,7 +94,14 @@ class BaseStrategy:
                     self.get_auto_generated_orders(currency_code, dt_dfs[currency_code])
                 )
 
-        for order in orders_to_process:
+        order_scores = [
+            self.get_score(dt_dfs[order.currency_code], order)
+            for order in orders_to_process
+        ]
+        final_orders = list(zip(orders_to_process, order_scores))
+        final_orders.sort(key=lambda x: x[1], reverse=True)
+
+        for order, _ in final_orders:
             df = dt_dfs[order.currency_code]
             most_recent_data: Series[CryptoHistorical] = df.iloc[-1]
 
@@ -195,3 +202,8 @@ class BaseStrategy:
         self, currency_code: str, df: DataFrame[CryptoHistorical]
     ) -> List[CryptoLimitOrder]:
         return []
+
+    def get_score(
+        self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
+    ) -> float:
+        raise NotImplementedError("This method should be overridden by subclasses")

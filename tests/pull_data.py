@@ -12,6 +12,8 @@ for crypto in CRYPTO_CURRENCY_CODES:
     df.to_json(f"rh_{crypto}_historical_data.json")
 
     broker = CryptoCompareBroker()
-    hist = broker.get_crypto_historical(crypto, "minute", pull_from_api=True)
+    hist = broker.get_crypto_historical(
+        crypto, "minute", pull_from_api=True, is_backtest=True
+    )
 
     time.sleep(30)

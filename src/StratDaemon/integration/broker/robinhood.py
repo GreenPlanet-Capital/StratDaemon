@@ -1,7 +1,13 @@
 from datetime import datetime
+import time
 from typing import Any, Dict, List
 from devtools import pprint
 import pandas as pd
+from StratDaemon.integration.broker.utils import (
+    ExceptionType,
+    RobinhoodException,
+    retry_function,
+)
 import robin_stocks.robinhood as r
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.broker.crypto_compare import CryptoCompareBroker
@@ -73,7 +79,7 @@ class RobinhoodBroker(BaseBroker):
             )
             print("Falling back to CryptoCompare API.")
             df = self.fallback_broker.get_crypto_historical(
-                currency_code, CRYPTO_COMPARE_HISTORICAL_INTERVAL, pull_from_api=True
+                currency_code, CRYPTO_COMPARE_HISTORICAL_INTERVAL, pull_from_api=True, is_backtest=False
             )
         else:
             hist_data_parsed = [
@@ -104,39 +110,61 @@ class RobinhoodBroker(BaseBroker):
     def buy_crypto_limit(
         self, currency_code: str, amount: float, limit_price: float
     ) -> CryptoOrder:
-        return self.convert_order_to_obj(
+        return self.wait_for_order_conf_and_convert(
             r.order_buy_crypto_limit_by_price(currency_code, amount, limit_price)
         )
 
+    def sell_crypto_limit(
+        self, currency_code: str, amount: float, limit_price: float
+    ) -> CryptoOrder:
+        return self.wait_for_order_conf_and_convert(
+            r.order_sell_crypto_limit_by_price(currency_code, amount, limit_price)
+        )
+
+    @retry_function
     def buy_crypto_market(
         self,
         currency_code: str,
         amount: float,
         cur_df: Series[CryptoHistorical] | None,
     ) -> CryptoOrder:
-        return self.convert_order_to_obj(
+        return self.wait_for_order_conf_and_convert(
             r.order_buy_crypto_by_price(currency_code, amount)
         )
 
-    def sell_crypto_limit(
-        self, currency_code: str, amount: float, limit_price: float
-    ) -> CryptoOrder:
-        return self.convert_order_to_obj(
-            r.order_sell_crypto_limit_by_price(currency_code, amount, limit_price)
-        )
-
+    @retry_function
     def sell_crypto_market(
         self,
         currency_code: str,
         amount: float,
         cur_df: Series[CryptoHistorical] | None,
     ) -> CryptoOrder:
-        return self.convert_order_to_obj(
+        return self.wait_for_order_conf_and_convert(
             r.order_sell_fractional_by_price(currency_code, amount)
         )
 
-    def convert_order_to_obj(self, order: Dict[str, Any]) -> CryptoOrder:
-        pprint(order)
+    def wait_for_order_conf_and_convert(
+        self, order: Dict[str, Any], max_retries: int = 5
+    ) -> CryptoOrder:
+        order_state = order["state"]
+
+        for _ in range(max_retries):
+            order_info = r.get_crypto_order_info(order["id"])
+            order_state = order_info["state"]
+            if order_state == "rejected":
+                raise RobinhoodException(
+                    f"Order was rejected", ExceptionType.ORDER_REJECTED
+                )
+            elif order_state == "filled":
+                break
+            time.sleep(5)
+
+        if order_state != "filled":
+            raise RobinhoodException(
+                f"Order was not filled after {max_retries} retries",
+                ExceptionType.ORDER_NOT_FILLED,
+            )
+
         return CryptoOrder(
             side=order["side"],
             currency_code=order["currency_code"],

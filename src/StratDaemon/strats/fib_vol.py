@@ -70,31 +70,34 @@ class FibVolStrategy(BaseStrategy):
     def is_within_p_thres(
         self,
         df: DataFrame[CryptoHistorical],
-        order: CryptoLimitOrder,
+        indicator_value: float,
         percent_diff_threshold: float,
+        indicator: str,
     ) -> bool:
         return (
-            abs(percent_difference(df.iloc[-1].close, order.limit_price))
+            abs(percent_difference(df.iloc[-1][indicator], indicator_value))
             <= percent_diff_threshold
         )
 
-    def is_vol_increasing(self, df: DataFrame[CryptoHistorical]) -> bool:
+    def is_indicator_increasing(
+        self, df: DataFrame[CryptoHistorical], indicator: str
+    ) -> bool:
         return (
-            df["boll_diff"].rolling(window=self.vol_window_size).mean().iloc[-1]
-            > df["boll_diff"].rolling(window=self.vol_window_size).mean().iloc[-2]
+            df[indicator].rolling(window=self.vol_window_size).mean().iloc[-1]
+            > df[indicator].rolling(window=self.vol_window_size).mean().iloc[-2]
         )
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
         confident_signal = self.is_within_p_thres(
-            df, order, self.percent_diff_threshold
-        ) and not self.is_vol_increasing(df)
+            df, order.limit_price, self.percent_diff_threshold, "close"
+        ) and not self.is_indicator_increasing(df, "boll_diff")
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
         risk_signal = (
             self.random_number <= self.risk_factor
-            and self.is_within_p_thres(df, order, self.percent_diff_threshold)
-            and self.is_vol_increasing(df)
+            and self.is_within_p_thres(df, order.limit_price, self.percent_diff_threshold, "close")
+            and self.is_indicator_increasing(df, "boll_diff")
         )
         return confident_signal or risk_signal
 
@@ -102,8 +105,8 @@ class FibVolStrategy(BaseStrategy):
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> bool:
         confident_signal = self.is_within_p_thres(
-            df, order, self.percent_diff_threshold
-        ) and self.is_vol_increasing(df)
+            df, order.limit_price, self.percent_diff_threshold, "close"
+        ) and self.is_indicator_increasing(df, "boll_diff")
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so randomly decide to take the risk and hold
         return confident_signal and self.random_number > self.risk_factor
@@ -115,6 +118,12 @@ class FibVolStrategy(BaseStrategy):
         df = add_trends_upwards(df)
         df = add_fib_ret_lvls(df, df["trends_upwards"].iloc[-1])
         return df
+
+    def get_score(
+        self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
+    ) -> float:
+        sr = df.iloc[-1]
+        return 1 - percent_difference(sr.close, order.limit_price)
 
     def get_auto_generated_orders(
         self, currency_code: str, df: DataFrame[CryptoHistorical]

@@ -75,6 +75,7 @@ class BackTester:
     ) -> None:
         strat_rsi_buy_threshold = getattr(self.strat, "rsi_buy_threshold", -1)
         strat_rsi_sell_threshold = getattr(self.strat, "rsi_sell_threshold", -1)
+        p_diff_threshold_rsi = getattr(self.strat, "percent_diff_threshold_rsi", -1)
 
         fig = px.line(
             x=[p.timestamp for p in portfolio_hist], y=[p.value for p in portfolio_hist]
@@ -83,7 +84,7 @@ class BackTester:
             f"results/"
             f"{'_'.join(crypto_currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
             f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
-            f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
+            f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}_{p_diff_threshold_rsi}"
             f"_{self.strat.indicator_length}"
             f"_{self.strat.vol_window_size}_backtest.png"
         )
@@ -93,7 +94,7 @@ class BackTester:
             with open(csv_path, "w") as f:
                 f.write(
                     "currency_codes,strategy_name,percent_diff_threshold,span,wait_time,risk_factor,"
-                    "rsi_buy_threshold,rsi_sell_threshold,indicator_length,"
+                    "rsi_buy_threshold,rsi_sell_threshold,p_diff_threshold_rsi,indicator_length,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
                 )
 
@@ -101,7 +102,8 @@ class BackTester:
             f.write(
                 f"{'|'.join(crypto_currency_codes)},{self.strat_name},"
                 f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
-                f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{self.strat.indicator_length},"
+                f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{p_diff_threshold_rsi},"
+                f"{self.strat.indicator_length},"
                 f"{self.strat.vol_window_size},"
                 f"{portfolio_hist[-1].value},{num_buy_trades},"
                 f"{num_sell_trades}\n"
@@ -216,6 +218,7 @@ class BackTester:
             f" and risk_factor={self.strat.risk_factor}"
             f" and rsi_buy_threshold={getattr(self.strat, 'rsi_buy_threshold', -1)}"
             f" and rsi_sell_threshold={getattr(self.strat, 'rsi_sell_threshold', -1)}"
+            f" and percent_diff_threshold_rsi={getattr(self.strat, 'percent_diff_threshold_rsi', -1)}"
             f" and indicator_length={self.strat.indicator_length}"
         )
 
@@ -352,7 +355,7 @@ if __name__ == "__main__":
     # vol_window_sizes = [1, 5, 10, 50]
     vol_window_sizes = [10]
     spans = [30]
-    crypto_currency_codes = ["DOGE", "SHIB", "ETH"]
+    crypto_currency_codes = ["DOGE", "SHIB"]
     wait_times = [15]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
@@ -360,10 +363,11 @@ if __name__ == "__main__":
     buy_power = 1_000
     max_holding_per_currency = 500
 
-    indicator_lengths = [15, 18, 20, 28]
+    indicator_lengths = [10, 14, 18]
 
-    rsi_buy_thresholds = [70]
-    rsi_sell_thresholds = [50]
+    rsi_buy_thresholds = [30, 40, 50]
+    rsi_sell_thresholds = [50, 60, 70]
+    p_diff_thresholds_rsi = [0.001, 0.005, 0.01, 0.02, 0.1, 0.5]
 
     input_dt_dfs = {
         crypto_currency_code: pd.read_json(
@@ -378,6 +382,7 @@ if __name__ == "__main__":
         vol_window: int,
         risk_factor: float,
         indicator_length: int,
+        p_diff_rsi: float,
         rsi_buy_threshold: float,
         rsi_sell_threshold: float,
     ) -> BaseStrategy:
@@ -396,11 +401,12 @@ if __name__ == "__main__":
             buy_power=buy_power,
             max_holding_per_currency=max_holding_per_currency,
             indicator_length=indicator_length,
+            percent_diff_threshold_rsi=p_diff_rsi,
             rsi_buy_threshold=rsi_buy_threshold,
             rsi_sell_threshold=rsi_sell_threshold,
         )
 
-    strats_def = [FibVolStrategy, FibVolRsiStrategy]
+    strats_def = [FibVolRsiStrategy, FibVolStrategy]
 
     for (
         strat_def,
@@ -410,6 +416,7 @@ if __name__ == "__main__":
         wait_time,
         risk_factor,
         indicator_length,
+        p_diff_threshold_rsi,
         rsi_buy_threshold,
         rsi_sell_threshold,
     ) in itertools.product(
@@ -420,6 +427,7 @@ if __name__ == "__main__":
         wait_times,
         risk_factors,
         indicator_lengths,
+        p_diff_thresholds_rsi,
         rsi_buy_thresholds,
         rsi_sell_thresholds,
     ):
@@ -429,12 +437,15 @@ if __name__ == "__main__":
             vol_window,
             risk_factor,
             indicator_length,
+            p_diff_threshold_rsi,
             rsi_buy_threshold,
             rsi_sell_threshold,
         )
         # Useless to run this strat for diff rsi thresholds since it doesn't use rsi
         if strat.name == "fib_retracements_volatility" and (
-            rsi_buy_threshold != 50 or rsi_sell_threshold != 50
+            rsi_buy_threshold != rsi_buy_thresholds[0]
+            or rsi_sell_threshold != rsi_sell_thresholds[0]
+            or p_diff_threshold_rsi != p_diff_thresholds_rsi[0]
         ):
             continue
 
@@ -446,4 +457,4 @@ if __name__ == "__main__":
             span=span,
             wait_time=wait_time,
         )
-        back_tester.run(constrict_range=None, save_data=True, debug=False)
+        back_tester.run(constrict_range=24 * 60 * 7, save_data=True, debug=False)

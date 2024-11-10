@@ -73,6 +73,7 @@ class CryptoCompareBroker(BaseBroker):
         currency_code: str,
         interval: str,
         pull_from_api: bool = False,
+        is_backtest: bool = False,
     ) -> DataFrame[CryptoHistorical]:
         local_data_path = f"{currency_code}_{LOCAL_DATA_PATH_SUFFIX}"
 
@@ -106,6 +107,9 @@ class CryptoCompareBroker(BaseBroker):
                 if save_data_interval <= 0:
                     df = self.combine_df_and_save(df, crypto_hist, local_data_path)
                     save_data_interval = self.save_data_interval
+
+                if is_backtest is False:
+                    break
 
             df = self.combine_df_and_save(df, crypto_hist, local_data_path)
 
