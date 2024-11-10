@@ -5,7 +5,7 @@ import time
 
 broker = RobinhoodBroker()
 
-for crypto in CRYPTO_CURRENCY_CODES[-1:-1]:
+for crypto in CRYPTO_CURRENCY_CODES:
     print(f"Pulling historical data for {crypto}...")
     df = broker.get_crypto_historical(crypto, "hour", "week")
     df = df.sort_values("timestamp", ascending=True)
