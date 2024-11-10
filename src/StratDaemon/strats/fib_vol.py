@@ -41,6 +41,7 @@ class FibVolStrategy(BaseStrategy):
         risk_factor: float = RISK_FACTOR,
         buy_power: float = BUY_POWER,
         max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
+        indicator_length: int = DEFAULT_INDICATOR_LENGTH,
         name_override: str = None,
         **kwargs,
     ) -> None:
@@ -60,6 +61,7 @@ class FibVolStrategy(BaseStrategy):
         )
         self.percent_diff_threshold = percent_diff_threshold
         self.vol_window_size = vol_window_size
+        self.indicator_length = indicator_length
         self.random_number = None
 
     def update_random_number(self):
@@ -109,7 +111,7 @@ class FibVolStrategy(BaseStrategy):
     def transform_df(
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
-        df = add_boll_diff(df, DEFAULT_INDICATOR_LENGTH)
+        df = add_boll_diff(df, self.indicator_length)
         df = add_trends_upwards(df)
         df = add_fib_ret_lvls(df, df["trends_upwards"].iloc[-1])
         return df

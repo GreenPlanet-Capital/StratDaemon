@@ -7,6 +7,7 @@ from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
 from StratDaemon.strats.boll import BollStrategy
 from StratDaemon.strats.fib_vol import FibVolStrategy
+from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from StratDaemon.strats.naive import NaiveStrategy
 from StratDaemon.strats.rsi import RsiStrategy
 from StratDaemon.strats.rsi_boll import RsiBollStrategy
@@ -76,6 +77,8 @@ def start(
             strat_class = RsiBollStrategy
         case "fib_vol":
             strat_class = FibVolStrategy
+        case "fib_vol_rsi":
+            strat_class = FibVolRsiStrategy
         case _:
             raise typer.Exit(
                 "Invalid strategy. Needs to be one of: naive, rsi, boll, rsi_boll, fib_vol"

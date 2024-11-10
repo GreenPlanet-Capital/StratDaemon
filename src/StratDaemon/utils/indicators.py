@@ -2,7 +2,6 @@ from pandera.typing import DataFrame
 from StratDaemon.models.crypto import CryptoHistorical
 from StratDaemon.utils.constants import FIB_VALUES
 import pandas_ta as ta
-from StratDaemon.utils.funcs import normalize_values
 
 
 def add_fib_ret_lvls(
@@ -25,9 +24,7 @@ def add_boll_diff(
     df: DataFrame[CryptoHistorical], length: int
 ) -> DataFrame[CryptoHistorical]:
     boll = ta.bbands(df["close"], length=length)
-    df["boll_diff"] = boll[f"BBU_14_2.0"] - boll["BBL_14_2.0"]
-    df = df.dropna()
-    df["boll_diff"] = normalize_values(df["boll_diff"], 0, 1)
+    df["boll_diff"] = boll[f"BBU_{length}_2.0"] - boll[f"BBL_{length}_2.0"]
     return df
 
 

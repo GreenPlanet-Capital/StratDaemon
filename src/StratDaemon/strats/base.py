@@ -122,7 +122,7 @@ class BaseStrategy:
                 if (
                     order.side == "buy"
                     and buy_power >= order.amount
-                    and cur_holding < self.max_holding_per_currency
+                    and cur_holding + order.amount <= self.max_holding_per_currency
                 ) or (order.side == "sell" and cur_holding >= order.amount):
                     negate = -1 if order.side == "buy" else 1
                     buy_power += order.amount * negate
@@ -136,10 +136,10 @@ class BaseStrategy:
 
                 if self.paper_trade:
                     if print_orders:
-                        print(f"Paper trading {order.side} order:")
+                        print(f"Paper trading {order.side} order for {currency_code}:")
                 else:
                     if print_orders:
-                        print(f"Executing live {order.side} order:")
+                        print(f"Executing live {order.side} order for {currency_code}:")
 
                     processed_orders.append(
                         getattr(self.broker, f"{order.side}_crypto_market")(

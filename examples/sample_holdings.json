@@ -6,5 +6,9 @@
     {
         "currency_code": "ETH",
         "amount": 600
+    },
+    {
+        "currency_code": "SHIB",
+        "amount": 100
     }
 ]

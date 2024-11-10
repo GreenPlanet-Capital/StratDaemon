@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, List
+from devtools import pprint
 import pandas as pd
 import robin_stocks.robinhood as r
 from StratDaemon.integration.broker.base import BaseBroker
@@ -131,10 +132,11 @@ class RobinhoodBroker(BaseBroker):
         cur_df: Series[CryptoHistorical] | None,
     ) -> CryptoOrder:
         return self.convert_order_to_obj(
-            r.order_sell_crypto_by_price(currency_code, amount)
+            r.order_sell_fractional_by_price(currency_code, amount)
         )
 
     def convert_order_to_obj(self, order: Dict[str, Any]) -> CryptoOrder:
+        pprint(order)
         return CryptoOrder(
             side=order["side"],
             currency_code=order["currency_code"],

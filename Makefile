@@ -3,16 +3,16 @@ run:
 	strat-daemon start --path-to-currency-codes examples/sample_currencies.txt \
 					   --path-to-holdings examples/sample_holdings.json \
 					   --no-paper-trade --auto-generate-orders --no-confirm-before-trade \
-					   --max-amount-per-order 100 --strategy fib_vol --poll-interval 900
+					   --max-amount-per-order 100 --strategy fib_vol_rsi --poll-interval 900
 
 run-paper:
 	strat-daemon start --path-to-currency-codes examples/sample_currencies.txt \
 					   --path-to-holdings examples/sample_holdings.json \
 					   --paper-trade --auto-generate-orders --no-confirm-before-trade \
-					   --max-amount-per-order 100 --strategy fib_vol --poll-interval 900
+					   --max-amount-per-order 100 --strategy fib_vol_rsi --poll-interval 900
 
 get-results:
-	python tests/get_results.py
+	python tests/get_results.py $(ORDER)
 
 test: clean
 	python tests/back_tester.py

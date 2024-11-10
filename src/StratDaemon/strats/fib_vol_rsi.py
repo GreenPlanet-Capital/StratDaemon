@@ -39,6 +39,7 @@ class FibVolRsiStrategy(FibVolStrategy):
         risk_factor: float = RISK_FACTOR,
         buy_power: float = BUY_POWER,
         max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
+        indicator_length: int = DEFAULT_INDICATOR_LENGTH,
         rsi_buy_threshold: float = RSI_BUY_THRESHOLD,
         rsi_sell_threshold: float = RSI_SELL_THRESHOLD,
     ) -> None:
@@ -56,6 +57,7 @@ class FibVolRsiStrategy(FibVolStrategy):
             risk_factor,
             buy_power,
             max_holding_per_currency,
+            indicator_length,
             "fib_retracements_volatility_rsi",
         )
         self.percent_diff_threshold = percent_diff_threshold
@@ -94,5 +96,6 @@ class FibVolRsiStrategy(FibVolStrategy):
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
         df = super().transform_df(df)
-        df = add_rsi(df, DEFAULT_INDICATOR_LENGTH)
+        df = add_rsi(df, self.indicator_length)
+        df = df.dropna()
         return df

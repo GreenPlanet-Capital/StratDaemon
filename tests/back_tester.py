@@ -84,6 +84,7 @@ class BackTester:
             f"{'_'.join(crypto_currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
             f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
             f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
+            f"_{self.strat.indicator_length}"
             f"_{self.strat.vol_window_size}_backtest.png"
         )
         csv_path = "results/performance.csv"
@@ -92,7 +93,7 @@ class BackTester:
             with open(csv_path, "w") as f:
                 f.write(
                     "currency_codes,strategy_name,percent_diff_threshold,span,wait_time,risk_factor,"
-                    "rsi_buy_threshold,rsi_sell_threshold,"
+                    "rsi_buy_threshold,rsi_sell_threshold,indicator_length,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
                 )
 
@@ -100,7 +101,7 @@ class BackTester:
             f.write(
                 f"{'|'.join(crypto_currency_codes)},{self.strat_name},"
                 f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
-                f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},"
+                f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{self.strat.indicator_length},"
                 f"{self.strat.vol_window_size},"
                 f"{portfolio_hist[-1].value},{num_buy_trades},"
                 f"{num_sell_trades}\n"
@@ -129,7 +130,7 @@ class BackTester:
                 cur_holding["num_buy_orders"] += 1
 
         def safe_div(a: float, b: float) -> float:
-            return a / b if b != 0 else 0
+            return "{:.10f}".format(a / b) if b != 0 else 0
 
         for _, holding in holdings.items():
             holding["average_price"] = safe_div(
@@ -179,7 +180,7 @@ class BackTester:
                 cnts[order.currency_code] += 1
             assert all(
                 cnt <= 1 for cnt in cnts.values()
-            ), "Only one order (or none) should be generated per interval"
+            ), "Only one order (or none) should be generated per cryptocurrency per interval"
 
             prev_portfolio = portfolio_hist[-1]
 
@@ -215,6 +216,7 @@ class BackTester:
             f" and risk_factor={self.strat.risk_factor}"
             f" and rsi_buy_threshold={getattr(self.strat, 'rsi_buy_threshold', -1)}"
             f" and rsi_sell_threshold={getattr(self.strat, 'rsi_sell_threshold', -1)}"
+            f" and indicator_length={self.strat.indicator_length}"
         )
 
         self.print_agg_holdings(portfolio_hist[-1].holdings, cur_prices_dt)
@@ -345,8 +347,8 @@ class BackTester:
 
 if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
-    p_diff_thresholds = numeric_range(0.001, 0.006, 0.001)
-    # p_diff_thresholds = [0.005]
+    # p_diff_thresholds = numeric_range(0.001, 0.006, 0.001)
+    p_diff_thresholds = [0.005]
     # vol_window_sizes = [1, 5, 10, 50]
     vol_window_sizes = [10]
     spans = [30]
@@ -358,7 +360,9 @@ if __name__ == "__main__":
     buy_power = 1_000
     max_holding_per_currency = 500
 
-    rsi_buy_thresholds = [50]
+    indicator_lengths = [15, 18, 20, 28]
+
+    rsi_buy_thresholds = [70]
     rsi_sell_thresholds = [50]
 
     input_dt_dfs = {
@@ -373,9 +377,10 @@ if __name__ == "__main__":
         p_diff: float,
         vol_window: int,
         risk_factor: float,
+        indicator_length: int,
         rsi_buy_threshold: float,
         rsi_sell_threshold: float,
-    ):
+    ) -> BaseStrategy:
         return strat(
             broker=DEFAULT_BROKER,
             notif=None,
@@ -390,14 +395,12 @@ if __name__ == "__main__":
             risk_factor=risk_factor,
             buy_power=buy_power,
             max_holding_per_currency=max_holding_per_currency,
+            indicator_length=indicator_length,
             rsi_buy_threshold=rsi_buy_threshold,
             rsi_sell_threshold=rsi_sell_threshold,
         )
 
-    strats_def = [
-        FibVolStrategy,
-        # FibVolRsiStrategy
-    ]
+    strats_def = [FibVolStrategy, FibVolRsiStrategy]
 
     for (
         strat_def,
@@ -406,6 +409,7 @@ if __name__ == "__main__":
         span,
         wait_time,
         risk_factor,
+        indicator_length,
         rsi_buy_threshold,
         rsi_sell_threshold,
     ) in itertools.product(
@@ -415,6 +419,7 @@ if __name__ == "__main__":
         spans,
         wait_times,
         risk_factors,
+        indicator_lengths,
         rsi_buy_thresholds,
         rsi_sell_thresholds,
     ):
@@ -423,9 +428,16 @@ if __name__ == "__main__":
             p_diff,
             vol_window,
             risk_factor,
+            indicator_length,
             rsi_buy_threshold,
             rsi_sell_threshold,
         )
+        # Useless to run this strat for diff rsi thresholds since it doesn't use rsi
+        if strat.name == "fib_retracements_volatility" and (
+            rsi_buy_threshold != 50 or rsi_sell_threshold != 50
+        ):
+            continue
+
         back_tester = BackTester(
             strat,
             crypto_currency_codes,

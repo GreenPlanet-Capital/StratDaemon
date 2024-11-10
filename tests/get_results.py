@@ -1,6 +1,9 @@
 import pandas as pd
+import sys
 
-MAX_NUM_TRADES = 70
+MAX_NUM_TRADES = 100
+
+ASC = True if len(sys.argv) > 1 and sys.argv[1] == "asc" else False
 
 
 def column_rename(x):
@@ -11,10 +14,10 @@ def column_rename(x):
 
 
 df = pd.read_csv("results/performance.csv")
-df = df.sort_values("final_value", ascending=False)
+df = df.sort_values("final_value", ascending=ASC)
 
 df["num_trades"] = df["num_buy_trades"] + df["num_sell_trades"]
-df = df[(df["num_trades"] > 0) & (df["num_trades"] < MAX_NUM_TRADES)]
+df = df[(df["num_trades"] >= 0) & (df["num_trades"] < MAX_NUM_TRADES)]
 df.rename(columns=column_rename, inplace=True)
 
 
