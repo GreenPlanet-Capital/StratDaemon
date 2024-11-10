@@ -11,6 +11,9 @@ run-paper:
 					   --paper-trade --auto-generate-orders --no-confirm-before-trade \
 					   --max-amount-per-order 100 --strategy fib_vol --poll-interval 900
 
+get-results:
+	python tests/get_results.py
+
 test: clean
 	python tests/back_tester.py
 

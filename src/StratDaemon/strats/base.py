@@ -46,7 +46,7 @@ class BaseStrategy:
         self.risk_factor = risk_factor
         self.buy_power = self.initial_buy_power = buy_power
         self.max_holding_per_currency = max_holding_per_currency
-        self.holdings = {currency_code: 0.0 for currency_code in currency_codes}
+        self.holdings = {currency_code: 0.0 for currency_code in self.currency_codes}
 
     def init(self) -> None:
         print(

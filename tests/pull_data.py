@@ -14,4 +14,4 @@ for crypto in CRYPTO_CURRENCY_CODES:
     broker = CryptoCompareBroker()
     hist = broker.get_crypto_historical(crypto, "minute", pull_from_api=True)
 
-    time.sleep(5)
+    time.sleep(30)
