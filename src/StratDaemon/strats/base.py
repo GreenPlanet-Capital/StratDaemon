@@ -130,7 +130,7 @@ class BaseStrategy:
                 else:
                     if print_orders:
                         print(
-                            f"Insufficient funds or holdings to execute {order.side} order."
+                            f"Insufficient funds or holdings to execute {order.side} order for {currency_code}."
                         )
                     continue
 
