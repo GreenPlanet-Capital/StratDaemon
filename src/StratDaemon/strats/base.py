@@ -8,6 +8,7 @@ from devtools import pprint
 import time
 from StratDaemon.utils.constants import (
     BUY_POWER,
+    MAX_HOLDING_PER_CURRENCY,
     MAX_POLL_COUNT,
     POLL_INTERVAL_SEC,
     RH_HISTORICAL_INTERVAL,
@@ -30,6 +31,7 @@ class BaseStrategy:
         confirm_before_trade: bool = False,
         risk_factor: float = RISK_FACTOR,
         buy_power: float = BUY_POWER,
+        max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
     ) -> None:
         self.name = name
         self.broker = broker
@@ -43,6 +45,7 @@ class BaseStrategy:
         self.confirm_before_trade = confirm_before_trade
         self.risk_factor = risk_factor
         self.buy_power = self.initial_buy_power = buy_power
+        self.max_holding_per_currency = max_holding_per_currency
         self.holdings = {currency_code: 0.0 for currency_code in currency_codes}
 
     def init(self) -> None:
@@ -116,11 +119,11 @@ class BaseStrategy:
                 buy_power = self.buy_power
                 cur_holding = self.holdings[currency_code]
 
-                if (order.side == "buy" and buy_power >= order.amount) or (
-                    order.side == "sell"
-                    and self.initial_buy_power > buy_power
-                    and cur_holding >= order.amount
-                ):
+                if (
+                    order.side == "buy"
+                    and buy_power >= order.amount
+                    and cur_holding < self.max_holding_per_currency
+                ) or (order.side == "sell" and cur_holding >= order.amount):
                     negate = -1 if order.side == "buy" else 1
                     buy_power += order.amount * negate
                     cur_holding += order.amount * -negate

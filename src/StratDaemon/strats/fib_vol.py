@@ -8,6 +8,7 @@ from pandera.typing import DataFrame
 from StratDaemon.utils.constants import (
     BUY_POWER,
     DEFAULT_INDICATOR_LENGTH,
+    MAX_HOLDING_PER_CURRENCY,
     PERCENT_DIFF_THRESHOLD,
     RISK_FACTOR,
     VOL_WINDOW_SIZE,
@@ -39,6 +40,7 @@ class FibVolStrategy(BaseStrategy):
         vol_window_size: int = VOL_WINDOW_SIZE,
         risk_factor: float = RISK_FACTOR,
         buy_power: float = BUY_POWER,
+        max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
     ) -> None:
         super().__init__(
             "fib_retracements_volatility",
@@ -52,6 +54,7 @@ class FibVolStrategy(BaseStrategy):
             confirm_before_trade,
             risk_factor,
             buy_power,
+            max_holding_per_currency,
         )
         self.percent_diff_threshold = percent_diff_threshold
         self.vol_window_size = vol_window_size
