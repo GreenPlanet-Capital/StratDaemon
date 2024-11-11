@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.confirmation.base import BaseConfirmation
 from StratDaemon.integration.notification.base import BaseNotification
@@ -82,6 +82,9 @@ class FibVolStrategy(BaseStrategy):
     def is_indicator_increasing(
         self, df: DataFrame[CryptoHistorical], indicator: str
     ) -> bool:
+        assert (
+            len(df) > self.vol_window_size
+        ), f"Not enough data points to calculate indicator increase: DataFrame has {len(df)} but need more than {self.vol_window_size}"
         return (
             df[indicator].rolling(window=self.vol_window_size).mean().iloc[-1]
             > df[indicator].rolling(window=self.vol_window_size).mean().iloc[-2]
@@ -89,27 +92,29 @@ class FibVolStrategy(BaseStrategy):
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         confident_signal = self.is_within_p_thres(
             df, order.limit_price, self.percent_diff_threshold, "close"
         ) and not self.is_indicator_increasing(df, "boll_diff")
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
         risk_signal = (
             self.random_number <= self.risk_factor
-            and self.is_within_p_thres(df, order.limit_price, self.percent_diff_threshold, "close")
+            and self.is_within_p_thres(
+                df, order.limit_price, self.percent_diff_threshold, "close"
+            )
             and self.is_indicator_increasing(df, "boll_diff")
         )
-        return confident_signal or risk_signal
+        return confident_signal, risk_signal
 
     def execute_sell_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         confident_signal = self.is_within_p_thres(
             df, order.limit_price, self.percent_diff_threshold, "close"
         ) and self.is_indicator_increasing(df, "boll_diff")
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so randomly decide to take the risk and hold
-        return confident_signal and self.random_number > self.risk_factor
+        return confident_signal, self.random_number > self.risk_factor
 
     def transform_df(
         self, df: DataFrame[CryptoHistorical]

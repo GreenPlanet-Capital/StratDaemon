@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.confirmation.base import BaseConfirmation
 from StratDaemon.integration.notification.base import BaseNotification
@@ -10,7 +10,6 @@ from StratDaemon.utils.constants import (
     DEFAULT_INDICATOR_LENGTH,
     MAX_HOLDING_PER_CURRENCY,
     PERCENT_DIFF_THRESHOLD,
-    PERCENT_DIFF_THRESHOLD_RSI,
     RISK_FACTOR,
     RSI_BUY_THRESHOLD,
     RSI_SELL_THRESHOLD,
@@ -44,7 +43,6 @@ class FibVolRsiStrategy(FibVolStrategy):
         indicator_length: int = DEFAULT_INDICATOR_LENGTH,
         rsi_buy_threshold: float = RSI_BUY_THRESHOLD,
         rsi_sell_threshold: float = RSI_SELL_THRESHOLD,
-        percent_diff_threshold_rsi: float = PERCENT_DIFF_THRESHOLD_RSI,
     ) -> None:
         super().__init__(
             broker,
@@ -65,13 +63,12 @@ class FibVolRsiStrategy(FibVolStrategy):
         )
         self.percent_diff_threshold = percent_diff_threshold
         self.vol_window_size = vol_window_size
-        self.percent_diff_threshold_rsi = percent_diff_threshold_rsi
         self.rsi_buy_threshold = rsi_buy_threshold
         self.rsi_sell_threshold = rsi_sell_threshold
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         is_within_fib_lvl = self.is_within_p_thres(
             df, order.limit_price, self.percent_diff_threshold, "close"
         )
@@ -82,9 +79,7 @@ class FibVolRsiStrategy(FibVolStrategy):
         )  # stabilizing at support
 
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
-        is_within_rsi_lvl = self.is_within_p_thres(
-            df, self.rsi_buy_threshold, self.percent_diff_threshold_rsi, "rsi"
-        )
+        is_within_rsi_lvl = df.iloc[-1].rsi < self.rsi_buy_threshold
         is_rsi_increasing = self.is_indicator_increasing(df, "rsi")
         risk_signal = (
             is_within_fib_lvl
@@ -92,11 +87,11 @@ class FibVolRsiStrategy(FibVolStrategy):
             and is_within_rsi_lvl
             and is_rsi_increasing
         )
-        return confident_signal or risk_signal
+        return confident_signal, risk_signal
 
     def execute_sell_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         is_within_fib_lvl = self.is_within_p_thres(
             df, order.limit_price, self.percent_diff_threshold, "close"
         )
@@ -105,15 +100,13 @@ class FibVolRsiStrategy(FibVolStrategy):
             is_within_fib_lvl and is_vol_increasing
         )  # trying to break resistance
 
-        is_within_rsi_lvl = self.is_within_p_thres(
-            df, self.rsi_sell_threshold, self.percent_diff_threshold_rsi, "rsi"
-        )
+        is_within_rsi_lvl = df.iloc[-1].rsi > self.rsi_sell_threshold
         is_rsi_increasing = self.is_indicator_increasing(df, "rsi")
-        hold_signal = is_within_rsi_lvl and not is_rsi_increasing
+        risk_signal = is_within_rsi_lvl and not is_rsi_increasing
 
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so use rsi to decide to take the risk and hold
-        return confident_signal and hold_signal
+        return confident_signal, risk_signal
 
     def get_score(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
@@ -136,5 +129,5 @@ class FibVolRsiStrategy(FibVolStrategy):
     ) -> DataFrame[CryptoHistorical]:
         df = super().transform_df(df)
         df = add_rsi(df, self.indicator_length)
-        df = df.dropna()
+        # df = df.dropna()
         return df

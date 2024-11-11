@@ -5,12 +5,8 @@ from StratDaemon.daemons.strat import StratDaemon
 from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
-from StratDaemon.strats.boll import BollStrategy
 from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
-from StratDaemon.strats.naive import NaiveStrategy
-from StratDaemon.strats.rsi import RsiStrategy
-from StratDaemon.strats.rsi_boll import RsiBollStrategy
 from StratDaemon.utils.constants import cfg_parser as strat_cfg_parser
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
 import asyncio
@@ -67,14 +63,6 @@ def start(
         conf = None
 
     match strategy:
-        case "naive":
-            strat_class = NaiveStrategy
-        case "rsi":
-            strat_class = RsiStrategy
-        case "boll":
-            strat_class = BollStrategy
-        case "rsi_boll":
-            strat_class = RsiBollStrategy
         case "fib_vol":
             strat_class = FibVolStrategy
         case "fib_vol_rsi":

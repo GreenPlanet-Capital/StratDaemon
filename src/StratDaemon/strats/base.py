@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.confirmation.base import BaseConfirmation
 from StratDaemon.integration.notification.base import BaseNotification
@@ -15,6 +15,7 @@ from StratDaemon.utils.constants import (
     RH_HISTORICAL_SPAN,
     RISK_FACTOR,
 )
+from collections import defaultdict
 
 
 class BaseStrategy:
@@ -78,6 +79,61 @@ class BaseStrategy:
             dt_dfs[currency_code] = df
         return dt_dfs
 
+    def filter_orders(
+        self,
+        orders: List[CryptoLimitOrder],
+        dt_dfs: Dict[str, DataFrame[CryptoHistorical]],
+    ) -> Tuple[List[CryptoLimitOrder], List[Tuple[bool, bool]]]:
+        filtered_orders: List[CryptoLimitOrder] = []
+        order_signals = []
+        order_per_currency = defaultdict(list)
+
+        for order in orders:
+            order_per_currency[order.currency_code].append(order)
+
+        for currency_code, orders in order_per_currency.items():
+            df = dt_dfs[currency_code]
+            if len(orders) > 2:
+                raise ValueError(
+                    f"Too many orders generated for {currency_code}: {len(orders)}"
+                )
+            elif len(orders) == 2:
+                confident_signal_fst, risk_signal_fst = getattr(
+                    self, f"execute_{orders[0].side}_condition"
+                )(df, orders[0])
+                confident_signal_snd, risk_signal_snd = getattr(
+                    self, f"execute_{orders[1].side}_condition"
+                )(df, orders[1])
+
+                assert (not confident_signal_fst and not confident_signal_snd) or (
+                    confident_signal_fst ^ confident_signal_snd
+                ), "Confident signals for both orders cannot be True at the same time."
+
+                assert (not risk_signal_fst and not risk_signal_snd) or (
+                    risk_signal_fst ^ risk_signal_snd
+                ), "Risk signals for both orders cannot be True at the same time."
+
+                if confident_signal_fst:
+                    filtered_orders.append(orders[0])
+                    order_signals.append((confident_signal_fst, risk_signal_fst))
+                elif confident_signal_snd:
+                    filtered_orders.append(orders[1])
+                    order_signals.append((confident_signal_snd, risk_signal_snd))
+                elif risk_signal_fst:
+                    filtered_orders.append(orders[0])
+                    order_signals.append((confident_signal_fst, risk_signal_fst))
+                elif risk_signal_snd:
+                    filtered_orders.append(orders[1])
+                    order_signals.append((confident_signal_snd, risk_signal_snd))
+            elif len(orders) == 1:
+                confident_signal, risk_signal = getattr(
+                    self, f"execute_{orders[0].side}_condition"
+                )(df, orders[0])
+                order_signals.append((confident_signal, risk_signal))
+                filtered_orders.append(orders[0])
+
+        return filtered_orders, order_signals
+
     def execute(
         self,
         dt_dfs_input: Dict[str, DataFrame[CryptoHistorical]] | None = None,
@@ -101,7 +157,13 @@ class BaseStrategy:
         final_orders = list(zip(orders_to_process, order_scores))
         final_orders.sort(key=lambda x: x[1], reverse=True)
 
-        for order, _ in final_orders:
+        filtered_orders, order_signals = self.filter_orders(
+            [order for order, _ in final_orders], dt_dfs
+        )
+
+        for order, (confident_signal, risk_signal) in zip(
+            filtered_orders, order_signals
+        ):
             df = dt_dfs[order.currency_code]
             most_recent_data: Series[CryptoHistorical] = df.iloc[-1]
 
@@ -115,7 +177,7 @@ class BaseStrategy:
                 timestamp=most_recent_data.timestamp,
             )
 
-            if getattr(self, f"execute_{order.side}_condition")(df, order):
+            if confident_signal or risk_signal:
                 if self.confirm_before_trade:
                     if not self.send_notif_wait_for_conf(order):
                         print("Confirmation failed, skipping order.")
@@ -185,12 +247,12 @@ class BaseStrategy:
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         raise NotImplementedError("This method should be overridden by subclasses")
 
     def execute_sell_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         raise NotImplementedError("This method should be overridden by subclasses")
 
     def transform_df(

@@ -24,7 +24,7 @@ DEFAULT_BROKER = CryptoCompareBroker()
 class BackTester:
     def __init__(
         self,
-        strat: FibVolStrategy,
+        strat: FibVolRsiStrategy | FibVolStrategy,
         currency_codes: List[str],
         buy_power: float,
         span: int = 30,
@@ -46,7 +46,7 @@ class BackTester:
         self.ensure_data_dfs_consistent()
         self.input_dt_dfs = input_dt_dfs
         self.span = span
-        self.transaction_fee = 0
+        self.transaction_fee = 0.01
         self.wait_time = wait_time
         self.sanity_checks()
 
@@ -75,7 +75,6 @@ class BackTester:
     ) -> None:
         strat_rsi_buy_threshold = getattr(self.strat, "rsi_buy_threshold", -1)
         strat_rsi_sell_threshold = getattr(self.strat, "rsi_sell_threshold", -1)
-        p_diff_threshold_rsi = getattr(self.strat, "percent_diff_threshold_rsi", -1)
 
         fig = px.line(
             x=[p.timestamp for p in portfolio_hist], y=[p.value for p in portfolio_hist]
@@ -84,7 +83,7 @@ class BackTester:
             f"results/"
             f"{'_'.join(crypto_currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
             f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
-            f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}_{p_diff_threshold_rsi}"
+            f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
             f"_{self.strat.indicator_length}"
             f"_{self.strat.vol_window_size}_backtest.png"
         )
@@ -94,7 +93,7 @@ class BackTester:
             with open(csv_path, "w") as f:
                 f.write(
                     "currency_codes,strategy_name,percent_diff_threshold,span,wait_time,risk_factor,"
-                    "rsi_buy_threshold,rsi_sell_threshold,p_diff_threshold_rsi,indicator_length,"
+                    "rsi_buy_threshold,rsi_sell_threshold,indicator_length,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
                 )
 
@@ -102,7 +101,7 @@ class BackTester:
             f.write(
                 f"{'|'.join(crypto_currency_codes)},{self.strat_name},"
                 f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
-                f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{p_diff_threshold_rsi},"
+                f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},"
                 f"{self.strat.indicator_length},"
                 f"{self.strat.vol_window_size},"
                 f"{portfolio_hist[-1].value},{num_buy_trades},"
@@ -218,7 +217,6 @@ class BackTester:
             f" and risk_factor={self.strat.risk_factor}"
             f" and rsi_buy_threshold={getattr(self.strat, 'rsi_buy_threshold', -1)}"
             f" and rsi_sell_threshold={getattr(self.strat, 'rsi_sell_threshold', -1)}"
-            f" and percent_diff_threshold_rsi={getattr(self.strat, 'percent_diff_threshold_rsi', -1)}"
             f" and indicator_length={self.strat.indicator_length}"
         )
 
@@ -229,15 +227,6 @@ class BackTester:
                 portfolio_hist, self.num_buy_trades, self.num_sell_trades
             )
         return portfolio_hist
-
-    def find_closest_price(self, dt: pd.Timestamp, currency_code: str) -> float:
-        input_df = self.input_dt_dfs[currency_code]
-        nxt_data = input_df[input_df["timestamp"] >= dt]
-
-        if len(nxt_data) > 0:
-            return nxt_data.iloc[0].close
-
-        raise ValueError(f"Timestamp {dt} not found for {currency_code}")
 
     def process_order(
         self,
@@ -252,8 +241,8 @@ class BackTester:
             timestamp=dt,
         )
         cur_prices_dt = {
-            currency_code: self.find_closest_price(dt, currency_code)
-            for currency_code in self.currency_codes
+            currency_code: dfs[i].iloc[-1].close
+            for i, currency_code in enumerate(self.currency_codes)
         }
 
         cur_holdings = getattr(self, f"handle_{order.side}_order")(
@@ -282,15 +271,15 @@ class BackTester:
         prev_portfolio: Portfolio,
         cur_portfolio: Portfolio,
     ) -> List[CryptoOrder]:
-        # FIXME: Implement a working way of copying holdings
         cur_holdings = prev_portfolio.holdings
 
         if not self.is_zero(cur_portfolio.buy_power):
-            prev_order_amt = order.amount
-            order.amount = min(prev_order_amt, cur_portfolio.buy_power)
+            order.amount = min(order.amount, cur_portfolio.buy_power)
+            cur_portfolio.buy_power -= order.amount
+
             order.amount = order.amount * (1 - self.transaction_fee)
-            order.quantity *= order.amount / prev_order_amt
-            cur_portfolio.buy_power -= prev_order_amt
+            order.quantity = order.amount / order.asset_price
+
             cur_holdings.append(order)
             self.num_buy_trades += 1
 
@@ -303,17 +292,21 @@ class BackTester:
         prev_portfolio: Portfolio,
         cur_portfolio: Portfolio,
     ) -> List[CryptoOrder]:
-        # FIXME: Implement a working way of copying holdings
         cur_holdings = prev_portfolio.holdings
+        currency_code = order.currency_code
 
         # This also updates the amount of each holding
-        if self.get_total_holdings_amt(cur_prices_dt, cur_holdings) < order.amount:
-            return cur_holdings
+        total_holdings_amt = self.get_total_holdings_amt(cur_prices_dt, cur_holdings)
+        order.amount = min(order.amount, sum(total_holdings_amt[currency_code]))
 
         for holding in cur_holdings:
+            if holding.currency_code != order.currency_code:
+                continue
+
             sell_amount = min(holding.amount, order.amount)
             holding.amount -= sell_amount
             order.amount -= sell_amount
+            holding.quantity -= sell_amount / cur_prices_dt[currency_code]
             cur_portfolio.buy_power += sell_amount * (1 - self.transaction_fee)
             self.num_sell_trades += 1
 
@@ -327,12 +320,13 @@ class BackTester:
 
     def get_total_holdings_amt(
         self, cur_prices_dt: Dict[str, float], holdings: List[CryptoOrder]
-    ) -> float:
-        s = 0
+    ) -> Dict[str, List[float]]:
+        total_holdings = defaultdict(list)
         for holding in holdings:
-            holding.amount = holding.quantity * cur_prices_dt[holding.currency_code]
-            s += holding.amount
-        return s
+            currency_code = holding.currency_code
+            holding.amount = holding.quantity * cur_prices_dt[currency_code]
+            total_holdings[currency_code].append(holding.amount)
+        return total_holdings
 
     def get_data_by_interval(
         self, span: int, constrict_range: int | None = None, wait_time: int = 0
@@ -350,24 +344,48 @@ class BackTester:
 
 if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
-    # p_diff_thresholds = numeric_range(0.001, 0.006, 0.001)
-    p_diff_thresholds = [0.005]
-    # vol_window_sizes = [1, 5, 10, 50]
-    vol_window_sizes = [10]
-    spans = [30]
+    p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
+    # p_diff_thresholds = [0.005]
+    # vol_window_sizes = [10]
     crypto_currency_codes = ["DOGE", "SHIB"]
-    wait_times = [15]
+    wait_times = [10, 15, 30]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
     risk_factors = [0.1]
     buy_power = 1_000
     max_holding_per_currency = 500
 
-    indicator_lengths = [10, 14, 18]
+    # span, indicator_length, vol_window_size
+    interval_inputs = [
+        (15, 10, 5),
+        (30, 10, 5),
+        (30, 10, 10),
+        (30, 14, 5),
+        (30, 14, 10),
+        (30, 18, 5),
+        (30, 18, 10),
+        (30, 18, 10),
+        (45, 10, 5),
+        (45, 14, 5),
+        (45, 14, 10),
+        (45, 18, 5),
+        (45, 18, 10),
+        (60, 10, 5),
+        (60, 10, 10),
+        (60, 14, 5),
+        (60, 14, 10),
+        (60, 18, 5),
+        (60, 18, 10),
+    ]
+
+    for span, indicator_length, vol_window_size in interval_inputs:
+        # One less NaN than the indicator length
+        assert (
+            span - (indicator_length - 1) > vol_window_size
+        ), "Interval inputs are invalid"
 
     rsi_buy_thresholds = [30, 40, 50]
     rsi_sell_thresholds = [50, 60, 70]
-    p_diff_thresholds_rsi = [0.001, 0.005, 0.01, 0.02, 0.1, 0.5]
 
     input_dt_dfs = {
         crypto_currency_code: pd.read_json(
@@ -382,7 +400,6 @@ if __name__ == "__main__":
         vol_window: int,
         risk_factor: float,
         indicator_length: int,
-        p_diff_rsi: float,
         rsi_buy_threshold: float,
         rsi_sell_threshold: float,
     ) -> BaseStrategy:
@@ -401,7 +418,6 @@ if __name__ == "__main__":
             buy_power=buy_power,
             max_holding_per_currency=max_holding_per_currency,
             indicator_length=indicator_length,
-            percent_diff_threshold_rsi=p_diff_rsi,
             rsi_buy_threshold=rsi_buy_threshold,
             rsi_sell_threshold=rsi_sell_threshold,
         )
@@ -411,23 +427,17 @@ if __name__ == "__main__":
     for (
         strat_def,
         p_diff,
-        vol_window,
-        span,
         wait_time,
         risk_factor,
-        indicator_length,
-        p_diff_threshold_rsi,
+        (span, indicator_length, vol_window),
         rsi_buy_threshold,
         rsi_sell_threshold,
     ) in itertools.product(
         strats_def,
         p_diff_thresholds,
-        vol_window_sizes,
-        spans,
         wait_times,
         risk_factors,
-        indicator_lengths,
-        p_diff_thresholds_rsi,
+        interval_inputs,
         rsi_buy_thresholds,
         rsi_sell_thresholds,
     ):
@@ -437,7 +447,6 @@ if __name__ == "__main__":
             vol_window,
             risk_factor,
             indicator_length,
-            p_diff_threshold_rsi,
             rsi_buy_threshold,
             rsi_sell_threshold,
         )
@@ -445,7 +454,6 @@ if __name__ == "__main__":
         if strat.name == "fib_retracements_volatility" and (
             rsi_buy_threshold != rsi_buy_thresholds[0]
             or rsi_sell_threshold != rsi_sell_thresholds[0]
-            or p_diff_threshold_rsi != p_diff_thresholds_rsi[0]
         ):
             continue
 
@@ -457,4 +465,4 @@ if __name__ == "__main__":
             span=span,
             wait_time=wait_time,
         )
-        back_tester.run(constrict_range=24 * 60 * 7, save_data=True, debug=False)
+        back_tester.run(constrict_range=None, save_data=True, debug=False)
