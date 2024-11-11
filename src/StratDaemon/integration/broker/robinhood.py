@@ -79,7 +79,10 @@ class RobinhoodBroker(BaseBroker):
             )
             print("Falling back to CryptoCompare API.")
             df = self.fallback_broker.get_crypto_historical(
-                currency_code, CRYPTO_COMPARE_HISTORICAL_INTERVAL, pull_from_api=True, is_backtest=False
+                currency_code,
+                CRYPTO_COMPARE_HISTORICAL_INTERVAL,
+                pull_from_api=True,
+                is_backtest=False,
             )
         else:
             hist_data_parsed = [
@@ -140,7 +143,7 @@ class RobinhoodBroker(BaseBroker):
         cur_df: Series[CryptoHistorical] | None,
     ) -> CryptoOrder:
         return self.wait_for_order_conf_and_convert(
-            r.order_sell_fractional_by_price(currency_code, amount)
+            r.order_sell_crypto_by_price(currency_code, amount)
         )
 
     def wait_for_order_conf_and_convert(
