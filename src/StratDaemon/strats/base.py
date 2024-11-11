@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typing import Dict, List, Tuple
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.confirmation.base import BaseConfirmation
@@ -16,6 +18,8 @@ from StratDaemon.utils.constants import (
     RISK_FACTOR,
 )
 from collections import defaultdict
+from uuid import uuid4
+from StratDaemon.utils.funcs import print_dt
 
 
 class BaseStrategy:
@@ -48,16 +52,22 @@ class BaseStrategy:
         self.buy_power = self.initial_buy_power = buy_power
         self.max_holding_per_currency = max_holding_per_currency
         self.holdings = {currency_code: 0.0 for currency_code in self.currency_codes}
+        self.path_to_positions = Path(f"{self.name}_{uuid4()}.json")
 
     def init(self) -> None:
-        print(
-            f"Initialized {self.name} strategy with {self.buy_power} buy power and {self.max_amount_per_order} max amount per order"
-        )
-        pprint(self.holdings)
+        if self.paper_trade:
+            print_dt(
+                "Paper trading is enabled. Ensure below values are correct for correct simulation."
+            )
+        else:
+            print_dt(
+                "WARNING: Live trading is enabled. Ensure below values are correct for correct execution."
+            )
+        pprint(self.__dict__)
 
     def add_limit_order(self, order: CryptoLimitOrder):
         if self.auto_generate_orders:
-            print(
+            print_dt(
                 "Auto-generating orders is enabled. It is recommended not to add limit orders manually."
             )
         self.limit_orders.append(order)
@@ -180,9 +190,9 @@ class BaseStrategy:
             if confident_signal or risk_signal:
                 if self.confirm_before_trade:
                     if not self.send_notif_wait_for_conf(order):
-                        print("Confirmation failed, skipping order.")
+                        print_dt("Confirmation failed, skipping order.")
                         continue
-                    print("Confirmation received, proceeding with order.")
+                    print_dt("Confirmation received, proceeding with order.")
 
                 currency_code = order.currency_code
                 buy_power = self.buy_power
@@ -198,17 +208,21 @@ class BaseStrategy:
                     cur_holding += order.amount * -negate
                 else:
                     if print_orders:
-                        print(
+                        print_dt(
                             f"Insufficient funds or holdings to execute {order.side} order for {currency_code}."
                         )
                     continue
 
                 if self.paper_trade:
                     if print_orders:
-                        print(f"Paper trading {order.side} order for {currency_code}:")
+                        print_dt(
+                            f"Paper trading {order.side} order for {currency_code}:"
+                        )
                 else:
                     if print_orders:
-                        print(f"Executing live {order.side} order for {currency_code}:")
+                        print_dt(
+                            f"Executing live {order.side} order for {currency_code}:"
+                        )
 
                     processed_orders.append(
                         getattr(self.broker, f"{order.side}_crypto_market")(
@@ -219,13 +233,25 @@ class BaseStrategy:
                 if print_orders:
                     pprint(order)
 
+                self.write_order_to_file(order)
                 self.buy_power = min(buy_power, self.initial_buy_power)
                 self.holdings[order.currency_code] = cur_holding
                 if print_orders:
-                    print(f"Remaining buy power: {self.buy_power}")
-                    print(f"Current holdings for {currency_code}: {cur_holding}")
+                    print_dt(f"Remaining buy power: {self.buy_power}")
+                    print_dt(f"Current holdings for {currency_code}: {cur_holding}")
 
         return processed_orders
+
+    def write_order_to_file(self, order: CryptoOrder) -> None:
+        positions = []
+        if self.path_to_positions.exists():
+            with open(self.path_to_positions, "r") as f:
+                positions = json.load(f)
+
+        positions.append(order.model_dump_json())
+
+        with open(self.path_to_positions, "w") as f:
+            json.dump(positions, f)
 
     def send_notif_wait_for_conf(self, order: CryptoOrder) -> None:
         uid = self.notif.notify_order(order)
@@ -233,7 +259,7 @@ class BaseStrategy:
 
         try:
             self.conf.init_confirmation(uid)
-            print(f"Waiting for confirmation for order with uid={uid}...")
+            print_dt(f"Waiting for confirmation for order with uid={uid}...")
             for _ in range(MAX_POLL_COUNT):
                 time.sleep(POLL_INTERVAL_SEC)
 
@@ -241,7 +267,7 @@ class BaseStrategy:
                     break
             self.conf.delete_confirmation(uid)
         except Exception as e:
-            print(f"Error during confirmation: {e}")
+            print_dt(f"Error during confirmation: {e}")
 
         return is_confirmed
 

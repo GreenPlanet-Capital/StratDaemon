@@ -1,3 +1,4 @@
+from datetime import datetime
 import pandas as pd
 
 
@@ -19,3 +20,7 @@ def normalize_values(series: pd.Series, lower_bound, upper_bound) -> pd.Series:
 
 def percent_difference(value1, value2):
     return (value1 - value2) / value2 if value2 != 0 else 0
+
+
+def print_dt(*args, **kw):
+    print("[%s]" % (datetime.now()), *args, **kw)

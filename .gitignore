@@ -13,6 +13,7 @@ config_dev.ini
 *_historical_data.json
 *.png
 *.csv
+fib_*.json
 
 # Distribution / packaging
 .Python
