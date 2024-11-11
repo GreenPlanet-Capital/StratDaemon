@@ -1,7 +1,7 @@
 import pandas as pd
 import sys
 
-MAX_NUM_TRADES = 1e9
+MAX_NUM_TRADES = 100
 
 ASC = True if len(sys.argv) > 1 and sys.argv[1] == "asc" else False
 
@@ -19,6 +19,6 @@ df = df.sort_values("final_value", ascending=ASC)
 df["num_trades"] = df["num_buy_trades"] + df["num_sell_trades"]
 df = df[(df["num_trades"] >= 0) & (df["num_trades"] < MAX_NUM_TRADES)]
 df.rename(columns=column_rename, inplace=True)
-
+df.drop_duplicates(inplace=True)
 
 print(df.head(10))

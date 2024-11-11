@@ -344,7 +344,8 @@ class BackTester:
 
 if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
-    p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
+    # p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
+    p_diff_thresholds = numeric_range(0.02, 0.11, 0.01)
     # p_diff_thresholds = [0.005]
     # vol_window_sizes = [10]
     crypto_currency_codes = ["DOGE", "SHIB"]
