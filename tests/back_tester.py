@@ -345,11 +345,11 @@ class BackTester:
 if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
     # p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
-    p_diff_thresholds = numeric_range(0.02, 0.11, 0.01)
-    # p_diff_thresholds = [0.005]
+    # p_diff_thresholds = numeric_range(0.02, 0.11, 0.01)
+    p_diff_thresholds = [0.008]
     # vol_window_sizes = [10]
     crypto_currency_codes = ["DOGE", "SHIB"]
-    wait_times = [10, 15, 30]
+    wait_times = [30]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
     risk_factors = [0.1]
@@ -358,25 +358,7 @@ if __name__ == "__main__":
 
     # span, indicator_length, vol_window_size
     interval_inputs = [
-        (15, 10, 5),
-        (30, 10, 5),
-        (30, 10, 10),
-        (30, 14, 5),
-        (30, 14, 10),
-        (30, 18, 5),
-        (30, 18, 10),
-        (30, 18, 10),
-        (45, 10, 5),
-        (45, 14, 5),
-        (45, 14, 10),
-        (45, 18, 5),
-        (45, 18, 10),
-        (60, 10, 5),
-        (60, 10, 10),
-        (60, 14, 5),
         (60, 14, 10),
-        (60, 18, 5),
-        (60, 18, 10),
     ]
 
     for span, indicator_length, vol_window_size in interval_inputs:
@@ -385,8 +367,8 @@ if __name__ == "__main__":
             span - (indicator_length - 1) > vol_window_size
         ), "Interval inputs are invalid"
 
-    rsi_buy_thresholds = [30, 40, 50]
-    rsi_sell_thresholds = [50, 60, 70]
+    rsi_buy_thresholds = [40]
+    rsi_sell_thresholds = [70]
 
     input_dt_dfs = {
         crypto_currency_code: pd.read_json(
@@ -423,7 +405,10 @@ if __name__ == "__main__":
             rsi_sell_threshold=rsi_sell_threshold,
         )
 
-    strats_def = [FibVolRsiStrategy, FibVolStrategy]
+    strats_def = [
+        FibVolRsiStrategy,
+        # FibVolStrategy
+    ]
 
     for (
         strat_def,
