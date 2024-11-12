@@ -148,6 +148,7 @@ class BaseStrategy:
         self,
         dt_dfs_input: Dict[str, DataFrame[CryptoHistorical]] | None = None,
         print_orders: bool = True,
+        save_positions: bool = True,
     ) -> List[CryptoOrder]:
         dt_dfs = self.construct_dt_dfs(dt_dfs_input)
         processed_orders = []
@@ -233,7 +234,9 @@ class BaseStrategy:
                 if print_orders:
                     pprint(order)
 
-                self.write_order_to_file(order)
+                if save_positions:
+                    self.write_order_to_file(order)
+
                 self.buy_power = min(buy_power, self.initial_buy_power)
                 self.holdings[order.currency_code] = cur_holding
                 if print_orders:

@@ -1,7 +1,7 @@
 import pandas as pd
 import sys
 
-MAX_NUM_TRADES = 100
+MAX_NUM_TRADES = 1e9
 
 ASC = True if len(sys.argv) > 1 and sys.argv[1] == "asc" else False
 

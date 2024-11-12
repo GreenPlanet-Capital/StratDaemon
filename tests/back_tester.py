@@ -174,7 +174,9 @@ class BackTester:
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
-            orders = self.strat.execute(input_dt_dfs, print_orders=debug)
+            orders = self.strat.execute(
+                input_dt_dfs, print_orders=debug, save_positions=False
+            )
 
             cnts = Counter()
             for order in orders:
@@ -346,10 +348,10 @@ if __name__ == "__main__":
     # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
     # p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
     # p_diff_thresholds = numeric_range(0.02, 0.11, 0.01)
-    p_diff_thresholds = [0.008]
+    p_diff_thresholds = [0.05, 0.008]
     # vol_window_sizes = [10]
     crypto_currency_codes = ["DOGE", "SHIB"]
-    wait_times = [30]
+    wait_times = [10, 30]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
     risk_factors = [0.1]
@@ -357,9 +359,7 @@ if __name__ == "__main__":
     max_holding_per_currency = 500
 
     # span, indicator_length, vol_window_size
-    interval_inputs = [
-        (60, 14, 10),
-    ]
+    interval_inputs = [(60, 14, 10), (60, 10, 10)]
 
     for span, indicator_length, vol_window_size in interval_inputs:
         # One less NaN than the indicator length
@@ -367,8 +367,8 @@ if __name__ == "__main__":
             span - (indicator_length - 1) > vol_window_size
         ), "Interval inputs are invalid"
 
-    rsi_buy_thresholds = [40]
-    rsi_sell_thresholds = [70]
+    rsi_buy_thresholds = [40, 50]
+    rsi_sell_thresholds = [50, 70]
 
     input_dt_dfs = {
         crypto_currency_code: pd.read_json(
