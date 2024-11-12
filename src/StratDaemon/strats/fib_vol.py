@@ -82,13 +82,17 @@ class FibVolStrategy(BaseStrategy):
     def is_indicator_increasing(
         self, df: DataFrame[CryptoHistorical], indicator: str
     ) -> bool:
+        indicator_cur, indicator_prev = self.get_indicator_trend(df, indicator)
+        return indicator_cur > indicator_prev
+
+    def get_indicator_trend(
+        self, df: DataFrame[CryptoHistorical], indicator: str
+    ) -> Tuple[float, float]:
         assert (
             len(df) > self.vol_window_size
         ), f"Not enough data points to calculate indicator increase: DataFrame has {len(df)} but need more than {self.vol_window_size}"
-        return (
-            df[indicator].rolling(window=self.vol_window_size).mean().iloc[-1]
-            > df[indicator].rolling(window=self.vol_window_size).mean().iloc[-2]
-        )
+        rolling_mean = df[indicator].rolling(window=self.vol_window_size).mean()
+        return rolling_mean.iloc[-1], rolling_mean.iloc[-2]
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder

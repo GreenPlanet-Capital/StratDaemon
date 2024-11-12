@@ -1,11 +1,10 @@
 from datetime import datetime
 import time
 from typing import Any, Dict, List
-from devtools import pprint
 import pandas as pd
 from StratDaemon.integration.broker.utils import (
     ExceptionType,
-    RobinhoodException,
+    BrokerException,
     retry_function,
 )
 import robin_stocks.robinhood as r
@@ -66,6 +65,7 @@ class RobinhoodBroker(BaseBroker):
             "timestamp": datetime.now(),
         }
 
+    @retry_function(max_retries=2, wait_time=2)
     def get_crypto_historical(
         self, currency_code: str, interval: str, span: str
     ) -> DataFrame[CryptoHistorical]:
@@ -124,7 +124,7 @@ class RobinhoodBroker(BaseBroker):
             r.order_sell_crypto_limit_by_price(currency_code, amount, limit_price)
         )
 
-    @retry_function
+    @retry_function(max_retries=5, wait_time=5)
     def buy_crypto_market(
         self,
         currency_code: str,
@@ -135,7 +135,7 @@ class RobinhoodBroker(BaseBroker):
             r.order_buy_crypto_by_price(currency_code, amount)
         )
 
-    @retry_function
+    @retry_function(max_retries=5, wait_time=5)
     def sell_crypto_market(
         self,
         currency_code: str,
@@ -155,7 +155,7 @@ class RobinhoodBroker(BaseBroker):
             order_info = r.get_crypto_order_info(order["id"])
             order_state = order_info["state"]
             if order_state == "rejected":
-                raise RobinhoodException(
+                raise BrokerException(
                     f"Order was rejected", ExceptionType.ORDER_REJECTED
                 )
             elif order_state == "filled":
@@ -163,7 +163,7 @@ class RobinhoodBroker(BaseBroker):
             time.sleep(5)
 
         if order_state != "filled":
-            raise RobinhoodException(
+            raise BrokerException(
                 f"Order was not filled after {max_retries} retries",
                 ExceptionType.ORDER_NOT_FILLED,
             )

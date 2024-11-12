@@ -2,6 +2,7 @@ import os
 from typing import List
 import pandas as pd
 from StratDaemon.integration.broker.base import BaseBroker
+from StratDaemon.integration.broker.utils import BrokerException, ExceptionType
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
 from pandera.typing import DataFrame, Series
 import requests
@@ -23,7 +24,11 @@ class CryptoCompareBroker(BaseBroker):
         pass
 
     def make_crypto_historical_req(
-        self, currency_code: str, interval: str, to_timestamp: datetime | None
+        self,
+        currency_code: str,
+        interval: str,
+        to_timestamp: datetime | None,
+        is_backtest: bool = False,
     ) -> List[CryptoHistorical]:
         req_args = {
             "fsym": currency_code,
@@ -42,6 +47,11 @@ class CryptoCompareBroker(BaseBroker):
             response.raise_for_status()
         except Exception as e:
             print(f"Error encountered: {e}")
+            if is_backtest is False:
+                raise BrokerException(
+                    f"Failed to fetch data for {currency_code} from CryptoCompare",
+                    ExceptionType.FAILED_TO_FETCH_DATA,
+                )
             return []
 
         return [
