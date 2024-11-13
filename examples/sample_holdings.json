@@ -1,11 +1,7 @@
 [
     {
         "currency_code": "DOGE",
-        "amount": 100
-    },
-    {
-        "currency_code": "ETH",
-        "amount": 600
+        "amount": 0
     },
     {
         "currency_code": "SHIB",
