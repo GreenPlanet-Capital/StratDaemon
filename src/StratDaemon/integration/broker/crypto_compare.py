@@ -1,5 +1,6 @@
 import os
 from typing import List
+import warnings
 import pandas as pd
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.broker.utils import BrokerException, ExceptionType
@@ -41,9 +42,12 @@ class CryptoCompareBroker(BaseBroker):
             req_args["toTs"] = int(to_timestamp.timestamp())
 
         try:
-            response = requests.get(
-                self.formulate_url(self.hist_base_url, interval, req_args), timeout=10
-            )
+            with warnings.catch_warnings(action="ignore"):
+                response = requests.get(
+                    self.formulate_url(self.hist_base_url, interval, req_args),
+                    timeout=10,
+                    verify=False,  # FIXME: This is insecure, but it's a possible fix to "Temporary failure in name resolution" issue
+                )
             response.raise_for_status()
         except Exception as e:
             print(f"Error encountered: {e}")
