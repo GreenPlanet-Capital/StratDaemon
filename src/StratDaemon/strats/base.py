@@ -96,12 +96,12 @@ class BaseStrategy:
     ) -> Tuple[List[CryptoLimitOrder], List[Tuple[bool, bool]]]:
         filtered_orders: List[CryptoLimitOrder] = []
         order_signals = []
-        order_per_currency = defaultdict(list)
+        orders_per_currency = defaultdict(list)
 
         for order in orders:
-            order_per_currency[order.currency_code].append(order)
+            orders_per_currency[order.currency_code].append(order)
 
-        for currency_code, orders in order_per_currency.items():
+        for currency_code, orders in orders_per_currency.items():
             df = dt_dfs[currency_code]
             if len(orders) > 2:
                 raise ValueError(

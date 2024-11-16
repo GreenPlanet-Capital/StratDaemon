@@ -230,6 +230,7 @@ class BackTester:
             f" and indicator_length={self.strat.indicator_length}"
         )
 
+        print(f"Buy power left: ${cur_portfolio.buy_power}")
         self.print_agg_holdings(portfolio_hist[-1].holdings, cur_prices_dt)
 
         if save_data:
@@ -475,4 +476,4 @@ if __name__ == "__main__":
             span=span,
             wait_time=wait_time,
         )
-        back_tester.run(constrict_range=24 * 60 * 2, save_data=True, debug=False)
+        back_tester.run(constrict_range=None, save_data=True, debug=False)

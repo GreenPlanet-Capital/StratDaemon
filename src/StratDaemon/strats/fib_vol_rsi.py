@@ -78,6 +78,12 @@ class FibVolRsiStrategy(FibVolStrategy):
         rsi_cur, rsi_prev = rsi.iloc[-1], rsi.loc[rsi_prev_idx]
         return percent_difference(rsi_cur, rsi_prev) >= self.rsi_percent_incr_threshold
 
+    def is_rsi_decreasing(self, df: DataFrame[CryptoHistorical]) -> bool:
+        rsi = df.rsi
+        rsi_prev_idx = max(rsi.first_valid_index(), len(rsi) - self.rsi_trend_span)
+        rsi_cur, rsi_prev = rsi.iloc[-1], rsi.loc[rsi_prev_idx]
+        return percent_difference(rsi_cur, rsi_prev) <= -self.rsi_percent_incr_threshold
+
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> Tuple[bool, bool]:
@@ -114,7 +120,7 @@ class FibVolRsiStrategy(FibVolStrategy):
 
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so use rsi to decide to take the risk and hold
-        return confident_signal and not self.is_rsi_increasing(df), risk_signal
+        return confident_signal and self.is_rsi_decreasing(df), risk_signal
 
     def get_score(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
