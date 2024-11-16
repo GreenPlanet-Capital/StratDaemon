@@ -1,5 +1,7 @@
 from enum import Enum
 import time
+import traceback
+from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.utils.constants import RESTART_WAIT_TIME
 from StratDaemon.utils.funcs import restart_program
 
@@ -41,6 +43,13 @@ def retry_function(max_retries: int, wait_time: int):
                     attempts += 1
                     if attempts < max_retries:
                         time.sleep(wait_time)
+            try:
+                sms = SMSNotification()
+                sms.notify_failed_order(
+                    args[1], func.__name__.split("_")[0], args[2], args[3].close
+                )
+            except Exception as _:
+                print(f"Failed to send SMS for failed order: {traceback.format_exc()}")
             if lst_exc and lst_exc.exception_type == ExceptionType.FAILED_TO_FETCH_DATA:
                 print(
                     f"Restarting program due to {lst_exc.exception_type.name} {lst_exc.message}"

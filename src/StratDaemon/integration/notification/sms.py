@@ -21,6 +21,14 @@ class SMSNotification(BaseNotification):
             )
         self.to_email = f"{PHONE_NUMBER}@{CARRIER_MAP[CARRIER]}"
 
+    def notify_failed_order(
+        self, currency_code: str, side: str, amount: int, asset_price: float
+    ):
+        subject, message = self.get_failed_message_and_subject(
+            currency_code, side, amount, asset_price
+        )
+        self.send_text(subject, message)
+
     def notify_order(self, order: CryptoOrder) -> str:
         subject, message, uid = self.get_message_and_subject(order)
         self.send_text(subject, message)
