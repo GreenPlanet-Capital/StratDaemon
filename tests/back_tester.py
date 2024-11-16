@@ -371,10 +371,10 @@ if __name__ == "__main__":
     # span, indicator_length, vol_window_size
     interval_inputs = [(60, 14, 10)]
 
-    # rsi_percent_incr_thresholds = numeric_range(0.1, 0.4, 0.1)
-    rsi_percent_incr_thresholds = [0.3]
-    # rsi_trend_spans = list(range(5, 8))
-    rsi_trend_spans = [6]
+    # rsi_percent_incr_thresholds = numeric_range(0.01, 0.4, 0.01)
+    rsi_percent_incr_thresholds = [0.03]
+    # rsi_trend_spans = list(range(5, 20))
+    rsi_trend_spans = [12]
 
     for span, indicator_length, vol_window_size in interval_inputs:
         # One less NaN than the indicator length

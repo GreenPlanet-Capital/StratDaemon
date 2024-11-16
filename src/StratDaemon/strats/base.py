@@ -86,6 +86,7 @@ class BaseStrategy:
                     currency_code, RH_HISTORICAL_INTERVAL, RH_HISTORICAL_SPAN
                 )
             df = self.transform_df(df)
+            df = df.reset_index(drop=True)
             dt_dfs[currency_code] = df
         return dt_dfs
 

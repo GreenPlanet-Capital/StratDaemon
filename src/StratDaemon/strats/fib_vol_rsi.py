@@ -72,17 +72,18 @@ class FibVolRsiStrategy(FibVolStrategy):
         self.rsi_percent_incr_threshold = rsi_percent_incr_threshold
         self.rsi_trend_span = rsi_trend_span
 
-    def is_rsi_increasing(self, df: DataFrame[CryptoHistorical]) -> bool:
+    def rsi_percent_change(self, df: DataFrame[CryptoHistorical]) -> float:
+        assert df.index[0] == 0, "Index must be 0-based"
         rsi = df.rsi
         rsi_prev_idx = max(rsi.first_valid_index(), len(rsi) - self.rsi_trend_span)
         rsi_cur, rsi_prev = rsi.iloc[-1], rsi.loc[rsi_prev_idx]
-        return percent_difference(rsi_cur, rsi_prev) >= self.rsi_percent_incr_threshold
+        return percent_difference(rsi_cur, rsi_prev)
+
+    def is_rsi_increasing(self, df: DataFrame[CryptoHistorical]) -> bool:
+        return self.rsi_percent_change(df) >= self.rsi_percent_incr_threshold
 
     def is_rsi_decreasing(self, df: DataFrame[CryptoHistorical]) -> bool:
-        rsi = df.rsi
-        rsi_prev_idx = max(rsi.first_valid_index(), len(rsi) - self.rsi_trend_span)
-        rsi_cur, rsi_prev = rsi.iloc[-1], rsi.loc[rsi_prev_idx]
-        return percent_difference(rsi_cur, rsi_prev) <= -self.rsi_percent_incr_threshold
+        return self.rsi_percent_change(df) <= -self.rsi_percent_incr_threshold
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder

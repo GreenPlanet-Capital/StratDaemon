@@ -56,7 +56,7 @@ VOL_WINDOW_SIZE = 10  # Bollinger Bands window size for Moving average
 
 RSI_BUY_THRESHOLD = 40
 RSI_SELL_THRESHOLD = 60
-RSI_PERCENT_INCR_THRESHOLD = 0.3
-RSI_TREND_SPAN = 6  # Number of minutes window to check difference between RSI Values
+RSI_PERCENT_INCR_THRESHOLD = 0.03
+RSI_TREND_SPAN = 12  # Number of minutes window to check difference between RSI Values
 
 MAX_HOLDING_PER_CURRENCY = 100.0
