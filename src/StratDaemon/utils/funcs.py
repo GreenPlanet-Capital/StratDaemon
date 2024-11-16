@@ -1,5 +1,11 @@
 from datetime import datetime
+import sys
 import pandas as pd
+import os
+
+
+def restart_program():
+    os.execl(sys.executable, sys.executable, *sys.argv)
 
 
 def get_normalized_value(x, lower_bound, upper_bound, max_x, min_x):

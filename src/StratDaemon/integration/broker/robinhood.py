@@ -149,6 +149,12 @@ class RobinhoodBroker(BaseBroker):
     def wait_for_order_conf_and_convert(
         self, order: Dict[str, Any], max_retries: int = 5
     ) -> CryptoOrder:
+        if order is None:
+            raise BrokerException(
+                f"Order failed due to errors from RH API call",
+                ExceptionType.ORDER_FAILED,
+            )
+
         order_state = order["state"]
 
         for _ in range(max_retries):

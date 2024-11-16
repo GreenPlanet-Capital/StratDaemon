@@ -1,8 +1,11 @@
 from enum import Enum
 import time
+from StratDaemon.utils.constants import RESTART_WAIT_TIME
+from StratDaemon.utils.funcs import restart_program
 
 
 class ExceptionType(Enum):
+    ORDER_FAILED = 0
     ORDER_REJECTED = 1
     ORDER_NOT_FILLED = 2
     FAILED_TO_FETCH_DATA = 3
@@ -21,17 +24,32 @@ def retry_function(max_retries: int, wait_time: int):
     def retry_logic(func):
         def wrapper(*args, **kwargs):
             attempts = 0
+            lst_exc: BrokerException | None = None
             while attempts < max_retries:
                 try:
                     return func(*args, **kwargs)
                 except BrokerException as re:
-                    if re.exception_type == ExceptionType.ORDER_NOT_FILLED:
-                        raise re
-                    print(f"Attempt {attempts + 1} failed: {re}")
+                    lst_exc = re
+                    if re.exception_type in {
+                        ExceptionType.ORDER_NOT_FILLED,
+                        ExceptionType.ORDER_FAILED,
+                    }:
+                        break
+                    print(
+                        f"Attempt {attempts + 1} failed: {re.exception_type.name} {re.message}"
+                    )
                     attempts += 1
                     if attempts < max_retries:
                         time.sleep(wait_time)
-            raise Exception("Function failed after maximum retries")
+            if lst_exc and lst_exc.exception_type == ExceptionType.FAILED_TO_FETCH_DATA:
+                print(
+                    f"Restarting program due to {lst_exc.exception_type.name} {lst_exc.message}"
+                )
+                time.sleep(RESTART_WAIT_TIME)
+                restart_program()
+            else:
+                lst_exc.message += f" after max {attempts + 1} attempts"
+                raise lst_exc
 
         return wrapper
 
