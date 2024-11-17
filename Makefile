@@ -16,8 +16,14 @@ get-results:
 test: clean
 	python tests/back_tester.py
 
+test-ml: clean
+	PYTHONPATH="${PYTHONPATH}:tests" python ml/tuning/test.py
+
+vis-ml:
+	optuna-dashboard sqlite:///optuna_db.sqlite3
+
 clean: check_clean
-	rm -f results/performance.csv results/*.png
+	rm -f results/performance.csv results/*.png optuna_db.sqlite3
 
 pull:
 	python tests/pull_data.py

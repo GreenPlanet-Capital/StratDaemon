@@ -14,6 +14,8 @@ config_dev.ini
 *.png
 *.csv
 fib_*.json
+render_logs
+*.sqlite3
 
 # Distribution / packaging
 .Python

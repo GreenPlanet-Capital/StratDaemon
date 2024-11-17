@@ -1,0 +1,7 @@
+optunahub==0.1.0
+pandas==2.0.3
+optuna==4.1.0
+optuna-dashboard==0.17.0
+gym-trading-env==0.3.3
+cmaes==0.11.1
+torch==2.5.1
