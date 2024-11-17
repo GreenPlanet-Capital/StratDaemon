@@ -22,8 +22,11 @@ test-ml: clean
 vis-ml:
 	optuna-dashboard sqlite:///optuna_db.sqlite3
 
+clean-ml:
+	rm -f optuna_db.sqlite3
+
 clean: check_clean
-	rm -f results/performance.csv results/*.png optuna_db.sqlite3
+	rm -f results/performance.csv results/*.png
 
 pull:
 	python tests/pull_data.py
