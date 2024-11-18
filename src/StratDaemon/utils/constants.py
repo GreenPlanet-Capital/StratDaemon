@@ -44,19 +44,18 @@ RESTART_WAIT_TIME = 30
 CRYPTO_CURRENCY_CODES = ["SHIB", "DOGE"]
 CRYPTO_COMPARE_HISTORICAL_INTERVAL = "minute"
 FIB_VALUES = [2.168, 2, 1.618, 1.382, 1, 0.618]
-NUMERICAL_SPAN = 60  # number of data points to consider for the trend (use - RSI and Bollinger Bands for MA)
+
 BUY_POWER = 250.0
-WAIT_TIME = 30
-
-DEFAULT_INDICATOR_LENGTH = 14  # RSI Window size for Moving average
-PERCENT_DIFF_THRESHOLD = (
-    0.01  # Threshold for percent difference between the current price and the Fib level
-)
-VOL_WINDOW_SIZE = 10  # Bollinger Bands window size for Moving average
-
-RSI_BUY_THRESHOLD = 40
-RSI_SELL_THRESHOLD = 60
-RSI_PERCENT_INCR_THRESHOLD = 0.03
-RSI_TREND_SPAN = 12  # Number of minutes window to check difference between RSI Values
-
 MAX_HOLDING_PER_CURRENCY = 100.0
+
+NUMERICAL_SPAN = 50  # number of data points to consider for the trend (use - RSI and Bollinger Bands for MA)
+WAIT_TIME = 45  # Time to wait before next iteration (in minutes)
+
+DEFAULT_INDICATOR_LENGTH = 20  # RSI Window size for Moving average
+VOL_WINDOW_SIZE = 18  # Bollinger Bands window size for Moving average
+PERCENT_DIFF_THRESHOLD = 0.02  # Threshold for percent difference between the current price and the closest Fib level
+
+RSI_BUY_THRESHOLD = 55
+RSI_SELL_THRESHOLD = 80
+RSI_PERCENT_INCR_THRESHOLD = 0.1
+RSI_TREND_SPAN = 5  # Number of minutes window to check difference between RSI Values

@@ -7,7 +7,7 @@ from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
 from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
-from StratDaemon.utils.constants import cfg_parser as strat_cfg_parser
+from StratDaemon.utils.constants import WAIT_TIME, cfg_parser as strat_cfg_parser
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
 import asyncio
 import json
@@ -37,7 +37,6 @@ def start(
     confirm_before_trade: Annotated[
         bool, typer.Option("--confirm-before-trade", "-cbt")
     ] = False,
-    poll_interval: Annotated[int, typer.Option("--poll-interval", "-pi")] = 60 * 5,
     poll_on_start: Annotated[bool, typer.Option("--poll-on-start", "-pos")] = True,
 ):
     match integration:
@@ -110,6 +109,7 @@ def start(
                 strat.add_limit_order(CryptoLimitOrder(**order))
 
     strat.init()
+    poll_interval = WAIT_TIME * 60
     daemon = StratDaemon(strat, poll_interval, poll_on_start)
     asyncio.run(daemon.start())
 

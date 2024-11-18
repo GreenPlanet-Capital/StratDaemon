@@ -436,7 +436,7 @@ def conduct_back_test(
         wait_time=wait_time,
     )
     return back_tester.run(
-        constrict_range=None, save_data=True, debug=False, save_graph=False
+        constrict_range=None, save_data=True, debug=False, save_graph=True
     )
 
 
@@ -445,10 +445,10 @@ if __name__ == "__main__":
     # p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
     # p_diff_thresholds = numeric_range(0.02, 0.11, 0.01)
     # p_diff_thresholds = numeric_range(0.005, 0.05, 0.001)
-    p_diff_thresholds = [0.01]
+    p_diff_thresholds = [0.02]
     # vol_window_sizes = [10]
     crypto_currency_codes = ["DOGE", "SHIB"]
-    wait_times = [30]
+    wait_times = [45]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
     risk_factors = [0.1]
@@ -457,15 +457,15 @@ if __name__ == "__main__":
     max_holding_per_currency = 500
 
     # span, indicator_length, vol_window_size
-    interval_inputs = [(60, 14, 10)]
+    interval_inputs = [(50, 20, 18)]
 
     # rsi_percent_incr_thresholds = numeric_range(0.01, 0.4, 0.01)
-    rsi_percent_incr_thresholds = [0.03]
+    rsi_percent_incr_thresholds = [0.1]
     # rsi_trend_spans = list(range(5, 20))
-    rsi_trend_spans = [12]
+    rsi_trend_spans = [5]
 
-    rsi_buy_thresholds = [40]
-    rsi_sell_thresholds = [60]
+    rsi_buy_thresholds = [55]
+    rsi_sell_thresholds = [80]
 
     strats_def = [
         FibVolRsiStrategy,
