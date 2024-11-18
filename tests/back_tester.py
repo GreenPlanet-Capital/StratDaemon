@@ -10,6 +10,7 @@ from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from test_models import Portfolio
 from StratDaemon.integration.broker.crypto_compare import CryptoCompareBroker
+from StratDaemon.integration.broker.kraken import KrakenBroker
 from pandera.typing import DataFrame
 from math import isclose
 import plotly.express as px
@@ -18,7 +19,7 @@ from more_itertools import numeric_range
 import numpy as np
 from collections import Counter, defaultdict
 
-DEFAULT_BROKER = CryptoCompareBroker()
+DEFAULT_BROKER = KrakenBroker()
 
 
 class BackTester:
@@ -447,7 +448,8 @@ if __name__ == "__main__":
     # p_diff_thresholds = numeric_range(0.005, 0.05, 0.001)
     p_diff_thresholds = [0.02]
     # vol_window_sizes = [10]
-    crypto_currency_codes = ["DOGE", "SHIB"]
+    # crypto_currency_codes = ["DOGE", "SHIB"]
+    crypto_currency_codes = ["SHIB", "BTC", "ETH"]
     wait_times = [45]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))

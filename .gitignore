@@ -16,6 +16,7 @@ config_dev.ini
 fib_*.json
 render_logs
 *.sqlite3
+kraken
 
 # Distribution / packaging
 .Python
