@@ -37,12 +37,12 @@ MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count", fallback=10
 
 RH_HISTORICAL_INTERVAL = "15second"
 RH_HISTORICAL_SPAN = "hour"
-RISK_FACTOR = 0.10
-RESTART_WAIT_TIME = 30
+CRYPTO_COMPARE_HISTORICAL_INTERVAL = "minute"
 
+RISK_FACTOR = 0.10  # deprecated (used in old strategy)
+RESTART_WAIT_TIME = 30  # Time to wait before restarting the daemon (in seconds)
 
 CRYPTO_CURRENCY_CODES = ["SHIB", "DOGE"]
-CRYPTO_COMPARE_HISTORICAL_INTERVAL = "minute"
 FIB_VALUES = [2.168, 2, 1.618, 1.382, 1, 0.618]
 
 BUY_POWER = 250.0
