@@ -19,7 +19,8 @@ from more_itertools import numeric_range
 import numpy as np
 from collections import Counter, defaultdict
 
-DEFAULT_BROKER = KrakenBroker()
+# DEFAULT_BROKER = KrakenBroker()
+DEFAULT_BROKER = CryptoCompareBroker()
 
 
 class BackTester:
@@ -199,7 +200,8 @@ class BackTester:
 
             for order in orders:
                 cur_portfolio = self.process_order(dfs, order, prev_portfolio)
-                portfolio_hist.append(cur_portfolio)
+                prev_portfolio = cur_portfolio
+            portfolio_hist.append(cur_portfolio)
 
         cur_portfolio = Portfolio(
             timestamp=datetime.now(),
@@ -218,7 +220,7 @@ class BackTester:
         portfolio_hist.append(cur_portfolio)
 
         print(
-            f"Ending with ${round(portfolio_hist[-1].value, 2)} after {self.num_buy_trades} "
+            f"Ending with ${round(cur_portfolio.value, 2)} after {self.num_buy_trades} "
             f"buy trades and {self.num_sell_trades} sell trades over "
             f"{constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes"
             f" making trades every {self.wait_time} minutes"
@@ -234,7 +236,7 @@ class BackTester:
         )
 
         print(f"Buy power left: ${cur_portfolio.buy_power}")
-        self.print_agg_holdings(portfolio_hist[-1].holdings, cur_prices_dt)
+        self.print_agg_holdings(cur_portfolio.holdings, cur_prices_dt)
 
         if save_data:
             self.save_portfolio(
@@ -437,7 +439,7 @@ def conduct_back_test(
         wait_time=wait_time,
     )
     return back_tester.run(
-        constrict_range=None, save_data=True, debug=False, save_graph=True
+        constrict_range=24 * 60 * 1, save_data=True, debug=False, save_graph=True
     )
 
 
@@ -448,8 +450,8 @@ if __name__ == "__main__":
     # p_diff_thresholds = numeric_range(0.005, 0.05, 0.001)
     p_diff_thresholds = [0.02]
     # vol_window_sizes = [10]
-    # crypto_currency_codes = ["DOGE", "SHIB"]
-    crypto_currency_codes = ["SHIB", "BTC", "ETH"]
+    crypto_currency_codes = ["DOGE", "SHIB"]
+    # crypto_currency_codes = ["SHIB"]
     wait_times = [45]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))
