@@ -21,6 +21,8 @@ from collections import Counter, defaultdict
 
 # DEFAULT_BROKER = KrakenBroker()
 DEFAULT_BROKER = CryptoCompareBroker()
+CONSTRICT_RANGE = None
+SAVE_GRAPH = False
 
 
 class BackTester:
@@ -439,7 +441,10 @@ def conduct_back_test(
         wait_time=wait_time,
     )
     return back_tester.run(
-        constrict_range=24 * 60 * 1, save_data=True, debug=False, save_graph=True
+        constrict_range=CONSTRICT_RANGE,
+        save_data=True,
+        debug=False,
+        save_graph=SAVE_GRAPH,
     )
 
 
