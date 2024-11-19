@@ -1,10 +1,10 @@
 [
     {
         "currency_code": "DOGE",
-        "amount": 100
+        "amount": 0
     },
     {
         "currency_code": "SHIB",
-        "amount": 100
+        "amount": 0
     }
 ]
