@@ -15,13 +15,14 @@ from pandera.typing import DataFrame
 from math import isclose
 import plotly.express as px
 import os
+import random
 from more_itertools import numeric_range
 import numpy as np
 from collections import Counter, defaultdict
 
 # DEFAULT_BROKER = KrakenBroker()
 DEFAULT_BROKER = CryptoCompareBroker()
-CONSTRICT_RANGE = None
+CONSTRICT_RANGE = 24 * 60 * 8
 SAVE_GRAPH = False
 
 
@@ -49,6 +50,7 @@ class BackTester:
         self.ensure_data_dfs_consistent()
         self.span = span
         self.transaction_fee = 0.01
+        self.trades_fail_rate = 0.5
         self.wait_time = wait_time
         self.crypto_currency_codes = currency_codes
         self.sanity_checks()
@@ -198,11 +200,13 @@ class BackTester:
                 cnt <= 1 for cnt in cnts.values()
             ), "Only one order (or none) should be generated per cryptocurrency per interval"
 
-            prev_portfolio = portfolio_hist[-1]
+            prev_portfolio = cur_portfolio = portfolio_hist[-1]
 
             for order in orders:
-                cur_portfolio = self.process_order(dfs, order, prev_portfolio)
-                prev_portfolio = cur_portfolio
+                if random.random() > self.trades_fail_rate:
+                    cur_portfolio = self.process_order(dfs, order, prev_portfolio)
+                    prev_portfolio = cur_portfolio
+
             portfolio_hist.append(cur_portfolio)
 
         cur_portfolio = Portfolio(
