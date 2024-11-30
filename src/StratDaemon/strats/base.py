@@ -8,6 +8,7 @@ from StratDaemon.models.crypto import CryptoHistorical, CryptoLimitOrder, Crypto
 from pandera.typing import DataFrame, Series
 from devtools import pprint
 import time
+from StratDaemon.portfolio.portfolio_manager import PortfolioManager
 from StratDaemon.utils.constants import (
     BUY_POWER,
     MAX_HOLDING_PER_CURRENCY,
@@ -49,9 +50,8 @@ class BaseStrategy:
         self.paper_trade = paper_trade
         self.confirm_before_trade = confirm_before_trade
         self.risk_factor = risk_factor
-        self.buy_power = self.initial_buy_power = buy_power
         self.max_holding_per_currency = max_holding_per_currency
-        self.holdings = {currency_code: 0.0 for currency_code in self.currency_codes}
+        self.portfolio_mgr = PortfolioManager(currency_codes, buy_power)
         self.path_to_positions = Path(f"{self.name}_{uuid4()}.json")
 
     def init(self) -> None:
@@ -197,52 +197,38 @@ class BaseStrategy:
                     print_dt("Confirmation received, proceeding with order.")
 
                 currency_code = order.currency_code
-                buy_power = self.buy_power
-                cur_holding = self.holdings[currency_code]
+                executed_orders = self.portfolio_mgr.process_order(dt_dfs, order)
 
-                if (
-                    order.side == "buy"
-                    and buy_power >= order.amount
-                    and cur_holding + order.amount <= self.max_holding_per_currency
-                ) or (order.side == "sell" and cur_holding >= order.amount):
-                    negate = -1 if order.side == "buy" else 1
-                    buy_power += order.amount * negate
-                    cur_holding += order.amount * -negate
-                else:
-                    if print_orders:
-                        print_dt(
-                            f"Insufficient funds or holdings to execute {order.side} order for {currency_code}."
-                        )
-                    continue
+                for exec_order in executed_orders:
+                    if self.paper_trade:
+                        if print_orders:
+                            print_dt(
+                                f"Paper trading {exec_order.side} order for {currency_code}:"
+                            )
+                    else:
+                        if print_orders:
+                            print_dt(
+                                f"Executing live {exec_order.side} order for {currency_code}:"
+                            )
 
-                if self.paper_trade:
-                    if print_orders:
-                        print_dt(
-                            f"Paper trading {order.side} order for {currency_code}:"
-                        )
-                else:
-                    if print_orders:
-                        print_dt(
-                            f"Executing live {order.side} order for {currency_code}:"
+                        processed_orders.append(
+                            getattr(self.broker, f"{exec_order.side}_crypto_market")(
+                                exec_order.currency_code,
+                                exec_order.amount,
+                                most_recent_data,
+                            )
                         )
 
-                    processed_orders.append(
-                        getattr(self.broker, f"{order.side}_crypto_market")(
-                            order.currency_code, order.amount, most_recent_data
-                        )
+                    if print_orders:
+                        pprint(exec_order)
+
+                    if save_positions:
+                        self.write_order_to_file(exec_order)
+
+                if print_orders:
+                    print_dt(
+                        f"Remaining buy power: {self.portfolio_mgr.portfolio_hist[-1].buy_power}"
                     )
-
-                if print_orders:
-                    pprint(order)
-
-                if save_positions:
-                    self.write_order_to_file(order)
-
-                self.buy_power = min(buy_power, self.initial_buy_power)
-                self.holdings[order.currency_code] = cur_holding
-                if print_orders:
-                    print_dt(f"Remaining buy power: {self.buy_power}")
-                    print_dt(f"Current holdings for {currency_code}: {cur_holding}")
 
         return processed_orders
 

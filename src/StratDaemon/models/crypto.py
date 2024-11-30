@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 from pydantic import BaseModel, Field
 import pandera as pa
 
@@ -36,3 +37,10 @@ class CryptoLimitOrder(BaseModel):
     currency_code: str
     limit_price: float
     amount: float
+
+
+class Portfolio(BaseModel):
+    timestamp: datetime
+    value: float
+    buy_power: float
+    holdings: List[CryptoOrder] = Field(default_factory=list)

@@ -4,11 +4,11 @@ from typing import Generator, List, Dict, Tuple
 from devtools import pprint
 import pandas as pd
 from tqdm import tqdm
-from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
+from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder, Portfolio
+from StratDaemon.portfolio.portfolio_manager import PortfolioManager
 from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
-from test_models import Portfolio
 from StratDaemon.integration.broker.crypto_compare import CryptoCompareBroker
 from StratDaemon.integration.broker.kraken import KrakenBroker
 from pandera.typing import DataFrame
@@ -18,12 +18,12 @@ import os
 import random
 from more_itertools import numeric_range
 import numpy as np
-from collections import Counter, defaultdict
+from collections import defaultdict
 
 # DEFAULT_BROKER = KrakenBroker()
 DEFAULT_BROKER = CryptoCompareBroker()
-CONSTRICT_RANGE = None
-SAVE_GRAPH = False
+CONSTRICT_RANGE = 24 * 60 * 7
+SAVE_GRAPH = True
 
 
 class BackTester:
@@ -38,7 +38,6 @@ class BackTester:
         self.strat = strat
         self.broker = DEFAULT_BROKER
         self.currency_codes = currency_codes
-        self.buy_power = buy_power
         strat_split = self.strat.name.split("_")
         self.strat_name = f"{strat_split[0]}_{strat_split[-1]}"
         self.all_data_dfs = [
@@ -49,10 +48,8 @@ class BackTester:
         ]
         self.ensure_data_dfs_consistent()
         self.span = span
-        self.transaction_fee = 0.01
-        self.trades_fail_rate = 0.5
         self.wait_time = wait_time
-        self.crypto_currency_codes = currency_codes
+        self.buy_power = buy_power
         self.sanity_checks()
 
     def sanity_checks(self) -> None:
@@ -93,7 +90,7 @@ class BackTester:
             )
             fig.write_image(
                 f"results/"
-                f"{'_'.join(self.crypto_currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
+                f"{'_'.join(self.currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
                 f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
                 f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
                 f"_{self.strat.indicator_length}"
@@ -112,7 +109,7 @@ class BackTester:
 
         with open(csv_path, "a") as f:
             f.write(
-                f"{'|'.join(self.crypto_currency_codes)},{self.strat_name},"
+                f"{'|'.join(self.currency_codes)},{self.strat_name},"
                 f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
                 f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{strat_rsi_percent_incr_threshold},"
                 f"{strat_rsi_trend_span},{self.strat.indicator_length},"
@@ -160,8 +157,6 @@ class BackTester:
         save_graph: bool = False,
         debug: bool = False,
     ) -> List[Portfolio]:
-        portfolio_hist: List[Portfolio] = []
-        self.num_buy_trades = self.num_sell_trades = 0
         print(f"Starting with ${self.buy_power}")
 
         for dfs in tqdm(
@@ -173,15 +168,6 @@ class BackTester:
                 else constrict_range // self.wait_time
             ),
         ):
-            if len(portfolio_hist) == 0:
-                portfolio_hist.append(
-                    Portfolio(
-                        value=self.buy_power,
-                        buy_power=self.buy_power,
-                        timestamp=dfs[0].iloc[-2].timestamp,
-                    )
-                )
-
             assert all(
                 len(df) == len(dfs[0]) == self.span for df in dfs
             ), "All dataframes must have the same length as the span"
@@ -193,22 +179,14 @@ class BackTester:
                 input_dt_dfs, print_orders=debug, save_positions=False
             )
 
-            cnts = Counter()
+            cnts = defaultdict(set)
             for order in orders:
-                cnts[order.currency_code] += 1
+                cnts[order.currency_code].add(order.side)
             assert all(
-                cnt <= 1 for cnt in cnts.values()
-            ), "Only one order (or none) should be generated per cryptocurrency per interval"
+                len(cnt) <= 1 for cnt in cnts.values()
+            ), "Only one order (or none) of each type should be generated per cryptocurrency per interval"
 
-            prev_portfolio = cur_portfolio = portfolio_hist[-1]
-
-            for order in orders:
-                if random.random() > self.trades_fail_rate:
-                    cur_portfolio = self.process_order(dfs, order, prev_portfolio)
-                    prev_portfolio = cur_portfolio
-
-            portfolio_hist.append(cur_portfolio)
-
+        prev_portfolio = self.strat.portfolio_mgr.portfolio_hist[-1]
         cur_portfolio = Portfolio(
             timestamp=datetime.now(),
             value=prev_portfolio.value,
@@ -219,15 +197,17 @@ class BackTester:
             currency_code: self.all_data_dfs[idx].iloc[-1].close
             for idx, currency_code in enumerate(self.currency_codes)
         }
-        cur_portfolio.value = self.calculate_portfolio_value(
+        cur_portfolio.value = self.strat.portfolio_mgr.calculate_portfolio_value(
             cur_portfolio,
             cur_prices_dt,
         )
-        portfolio_hist.append(cur_portfolio)
+        self.strat.portfolio_mgr.portfolio_hist.append(cur_portfolio)
 
+        num_buy_trades = self.strat.portfolio_mgr.num_buy_trades
+        num_sell_trades = self.strat.portfolio_mgr.num_sell_trades
         print(
-            f"Ending with ${round(cur_portfolio.value, 2)} after {self.num_buy_trades} "
-            f"buy trades and {self.num_sell_trades} sell trades over "
+            f"Ending with ${round(cur_portfolio.value, 2)} after {num_buy_trades} "
+            f"buy trades and {num_sell_trades} sell trades over "
             f"{constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes"
             f" making trades every {self.wait_time} minutes"
             f" with percent_diff_threshold={self.strat.percent_diff_threshold}"
@@ -243,115 +223,20 @@ class BackTester:
 
         print(f"Buy power left: ${cur_portfolio.buy_power}")
         self.print_agg_holdings(cur_portfolio.holdings, cur_prices_dt)
+        portfolio_hist = self.strat.portfolio_mgr.portfolio_hist
 
         if save_data:
             self.save_portfolio(
                 portfolio_hist,
-                self.num_buy_trades,
-                self.num_sell_trades,
+                num_buy_trades,
+                num_sell_trades,
                 save_graph=save_graph,
             )
-        return portfolio_hist, self.num_buy_trades, self.num_sell_trades
-
-    def process_order(
-        self,
-        dfs: List[DataFrame[CryptoHistorical]],
-        order: CryptoOrder,
-        prev_portfolio: Portfolio,
-    ) -> Portfolio:
-        dt = dfs[0].iloc[-1].timestamp
-        cur_portfolio = Portfolio(
-            value=prev_portfolio.value,
-            buy_power=prev_portfolio.buy_power,
-            timestamp=dt,
+        return (
+            portfolio_hist,
+            num_buy_trades,
+            num_sell_trades,
         )
-        cur_prices_dt = {
-            currency_code: dfs[i].iloc[-1].close
-            for i, currency_code in enumerate(self.currency_codes)
-        }
-
-        cur_holdings = getattr(self, f"handle_{order.side}_order")(
-            cur_prices_dt, order, prev_portfolio, cur_portfolio
-        )
-        cur_portfolio.holdings = cur_holdings
-
-        cur_portfolio.value = self.calculate_portfolio_value(
-            cur_portfolio, cur_prices_dt
-        )
-        return cur_portfolio
-
-    def calculate_portfolio_value(
-        self, portfolio: Portfolio, cur_prices_dt: Dict[str, float]
-    ) -> float:
-        holdings_value = portfolio.buy_power + sum(
-            holding.quantity * cur_prices_dt[holding.currency_code]
-            for holding in portfolio.holdings
-        )
-        return holdings_value
-
-    def handle_buy_order(
-        self,
-        _: float,
-        order: CryptoOrder,
-        prev_portfolio: Portfolio,
-        cur_portfolio: Portfolio,
-    ) -> List[CryptoOrder]:
-        cur_holdings = prev_portfolio.holdings
-
-        if not self.is_zero(cur_portfolio.buy_power):
-            order.amount = min(order.amount, cur_portfolio.buy_power)
-            cur_portfolio.buy_power -= order.amount
-
-            order.amount = order.amount * (1 - self.transaction_fee)
-            order.quantity = order.amount / order.asset_price
-
-            cur_holdings.append(order)
-            self.num_buy_trades += 1
-
-        return cur_holdings
-
-    def handle_sell_order(
-        self,
-        cur_prices_dt: Dict[str, float],
-        order: CryptoOrder,
-        prev_portfolio: Portfolio,
-        cur_portfolio: Portfolio,
-    ) -> List[CryptoOrder]:
-        cur_holdings = prev_portfolio.holdings
-        currency_code = order.currency_code
-
-        # This also updates the amount of each holding
-        total_holdings_amt = self.get_total_holdings_amt(cur_prices_dt, cur_holdings)
-        order.amount = min(order.amount, sum(total_holdings_amt[currency_code]))
-
-        for holding in cur_holdings:
-            if holding.currency_code != order.currency_code:
-                continue
-
-            sell_amount = min(holding.amount, order.amount)
-            holding.amount -= sell_amount
-            order.amount -= sell_amount
-            holding.quantity -= sell_amount / cur_prices_dt[currency_code]
-            cur_portfolio.buy_power += sell_amount * (1 - self.transaction_fee)
-            self.num_sell_trades += 1
-
-            if self.is_zero(order.amount):
-                break
-
-        return [holding for holding in cur_holdings if not self.is_zero(holding.amount)]
-
-    def is_zero(self, num: float) -> bool:
-        return isclose(num, 0, abs_tol=1)
-
-    def get_total_holdings_amt(
-        self, cur_prices_dt: Dict[str, float], holdings: List[CryptoOrder]
-    ) -> Dict[str, List[float]]:
-        total_holdings = defaultdict(list)
-        for holding in holdings:
-            currency_code = holding.currency_code
-            holding.amount = holding.quantity * cur_prices_dt[currency_code]
-            total_holdings[currency_code].append(holding.amount)
-        return total_holdings
 
     def get_data_by_interval(
         self, span: int, constrict_range: int | None = None, wait_time: int = 0
