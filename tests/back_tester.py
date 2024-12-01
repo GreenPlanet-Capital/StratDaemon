@@ -23,8 +23,7 @@ from collections import defaultdict
 
 DEFAULT_BROKER = KrakenBroker()
 # DEFAULT_BROKER = CryptoCompareBroker()
-# CONSTRICT_RANGE = 24 * 60 * 7
-CONSTRICT_RANGE = None
+CONSTRICT_RANGE = 24 * 60 * 7
 SAVE_GRAPH = True
 
 

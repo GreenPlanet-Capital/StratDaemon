@@ -29,7 +29,7 @@ class GraphHandler:
             fig = sp.make_subplots(
                 rows=1 + len(req_df_cols),
                 cols=1,
-                shared_xaxes="rows",
+                shared_xaxes=True,
                 subplot_titles=[
                     f"{currency_code} Crypto Price",
                     "Technical Indicators",
@@ -108,8 +108,6 @@ class GraphHandler:
                     row=2 + i,
                     col=1,
                 )
-
-            # order_type = "Buy" if position.order_type == 1 else "Sell"
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
