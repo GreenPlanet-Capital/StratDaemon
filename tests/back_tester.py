@@ -5,6 +5,7 @@ from devtools import pprint
 import pandas as pd
 from tqdm import tqdm
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder, Portfolio
+from StratDaemon.portfolio.graph_positions import GraphHandler
 from StratDaemon.portfolio.portfolio_manager import PortfolioManager
 from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol import FibVolStrategy
@@ -20,10 +21,11 @@ from more_itertools import numeric_range
 import numpy as np
 from collections import defaultdict
 
-# DEFAULT_BROKER = KrakenBroker()
-DEFAULT_BROKER = CryptoCompareBroker()
-CONSTRICT_RANGE = 24 * 60 * 7
-SAVE_GRAPH = False
+DEFAULT_BROKER = KrakenBroker()
+# DEFAULT_BROKER = CryptoCompareBroker()
+# CONSTRICT_RANGE = 24 * 60 * 7
+CONSTRICT_RANGE = None
+SAVE_GRAPH = True
 
 
 class BackTester:
@@ -74,6 +76,7 @@ class BackTester:
         portfolio_hist: List[Portfolio],
         num_buy_trades: int,
         num_sell_trades: int,
+        transactions: List[CryptoOrder],
         save_graph: bool = True,
     ) -> None:
         strat_rsi_buy_threshold = getattr(self.strat, "rsi_buy_threshold", -1)
@@ -84,6 +87,18 @@ class BackTester:
         strat_rsi_trend_span = getattr(self.strat, "rsi_trend_span", -1)
 
         if save_graph:
+            sliced_dfs = [
+                df[(len(df) - CONSTRICT_RANGE) :] if CONSTRICT_RANGE is not None else df
+                for df in self.all_data_dfs
+            ]
+            GraphHandler.graph_positions(
+                {
+                    currency_code: self.strat.transform_df(df)
+                    for currency_code, df in zip(self.currency_codes, sliced_dfs)
+                },
+                transactions,
+                show_enter_exit=True,
+            )
             fig = px.line(
                 x=[p.timestamp for p in portfolio_hist],
                 y=[p.value for p in portfolio_hist],
@@ -158,6 +173,7 @@ class BackTester:
         debug: bool = False,
     ) -> List[Portfolio]:
         print(f"Starting with ${self.buy_power}")
+        transactions: List[CryptoOrder] = []
 
         for dfs in tqdm(
             self.get_data_by_interval(self.span, constrict_range, self.wait_time),
@@ -175,7 +191,10 @@ class BackTester:
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
-            self.strat.execute(input_dt_dfs, print_orders=debug, save_positions=False)
+            orders = self.strat.execute(
+                input_dt_dfs, print_orders=debug, save_positions=False
+            )
+            transactions.extend(orders)
 
         prev_portfolio = self.strat.portfolio_mgr.portfolio_hist[-1]
         cur_portfolio = Portfolio(
@@ -222,6 +241,7 @@ class BackTester:
                 portfolio_hist,
                 num_buy_trades,
                 num_sell_trades,
+                transactions,
                 save_graph=save_graph,
             )
         return (
@@ -340,8 +360,8 @@ if __name__ == "__main__":
     # p_diff_thresholds = numeric_range(0.005, 0.05, 0.001)
     p_diff_thresholds = [0.02]
     # vol_window_sizes = [10]
-    crypto_currency_codes = ["DOGE", "SHIB"]
-    # crypto_currency_codes = ["SHIB"]
+    # crypto_currency_codes = ["DOGE", "SHIB"]
+    crypto_currency_codes = ["SHIB"]
     wait_times = [45]
     # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
     #     numeric_range(0.3, 0.6, 0.1))

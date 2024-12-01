@@ -24,7 +24,9 @@ def add_boll_diff(
     df: DataFrame[CryptoHistorical], length: int
 ) -> DataFrame[CryptoHistorical]:
     boll = ta.bbands(df["close"], length=length)
-    df["boll_diff"] = boll[f"BBU_{length}_2.0"] - boll[f"BBL_{length}_2.0"]
+    df["upper_bb"] = boll[f"BBU_{length}_2.0"]
+    df["lower_bb"] = boll[f"BBL_{length}_2.0"]
+    df["boll_diff"] = df["upper_bb"] - df["lower_bb"]
     return df
 
 
