@@ -17,6 +17,7 @@ from StratDaemon.utils.constants import (
     RH_HISTORICAL_INTERVAL,
     RH_HISTORICAL_SPAN,
     RISK_FACTOR,
+    TRAILING_STOP_LOSS,
 )
 from collections import defaultdict
 from uuid import uuid4
@@ -37,6 +38,7 @@ class BaseStrategy:
         confirm_before_trade: bool = False,
         risk_factor: float = RISK_FACTOR,
         buy_power: float = BUY_POWER,
+        trailing_stop_loss: float = TRAILING_STOP_LOSS,
         max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
     ) -> None:
         self.name = name
@@ -51,7 +53,9 @@ class BaseStrategy:
         self.confirm_before_trade = confirm_before_trade
         self.risk_factor = risk_factor
         self.max_holding_per_currency = max_holding_per_currency
-        self.portfolio_mgr = PortfolioManager(currency_codes, buy_power)
+        self.portfolio_mgr = PortfolioManager(
+            currency_codes, buy_power, trailing_stop_loss
+        )
         self.path_to_positions = Path(f"{self.name}_{uuid4()}.json")
 
     def init(self) -> None:
@@ -172,6 +176,19 @@ class BaseStrategy:
         filtered_orders, order_signals = self.filter_orders(
             [order for order, _ in final_orders], dt_dfs
         )
+        stop_loss_orders = self.portfolio_mgr.check_stop_loss(dt_dfs)
+
+        cnts = defaultdict(set)
+        for order in filtered_orders:
+            cnts[order.currency_code].add(order.side)
+        assert all(
+            len(cnt) <= 1 for cnt in cnts.values()
+        ), "Only one order (or none) of each type should be generated per cryptocurrency per interval"
+
+        if stop_loss_orders and print_orders:
+            print_dt(f"{len(stop_loss_orders)} stop loss orders found.")
+        filtered_orders.extend(stop_loss_orders)
+        order_signals.extend([(True, True) for _ in stop_loss_orders])
 
         for order, (confident_signal, risk_signal) in zip(
             filtered_orders, order_signals

@@ -93,7 +93,7 @@ class BackTester:
                 f"{'_'.join(self.currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
                 f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
                 f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
-                f"_{self.strat.indicator_length}"
+                f"_{self.strat.indicator_length}_{self.strat.portfolio_mgr.trailing_stop_loss}"
                 f"_{self.strat.vol_window_size}_backtest.png"
             )
 
@@ -103,7 +103,7 @@ class BackTester:
                 f.write(
                     "currency_codes,strategy_name,percent_diff_threshold,span,wait_time,risk_factor,"
                     "rsi_buy_threshold,rsi_sell_threshold,rsi_percent_incr_threshold,"
-                    "rsi_trend_span,indicator_length,"
+                    "rsi_trend_span,indicator_length,trailing_stop_loss,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
                 )
 
@@ -112,7 +112,7 @@ class BackTester:
                 f"{'|'.join(self.currency_codes)},{self.strat_name},"
                 f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
                 f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{strat_rsi_percent_incr_threshold},"
-                f"{strat_rsi_trend_span},{self.strat.indicator_length},"
+                f"{strat_rsi_trend_span},{self.strat.indicator_length},{self.strat.portfolio_mgr.trailing_stop_loss},"
                 f"{self.strat.vol_window_size},"
                 f"{portfolio_hist[-1].value},{num_buy_trades},"
                 f"{num_sell_trades}\n"
@@ -175,16 +175,7 @@ class BackTester:
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
-            orders = self.strat.execute(
-                input_dt_dfs, print_orders=debug, save_positions=False
-            )
-
-            cnts = defaultdict(set)
-            for order in orders:
-                cnts[order.currency_code].add(order.side)
-            assert all(
-                len(cnt) <= 1 for cnt in cnts.values()
-            ), "Only one order (or none) of each type should be generated per cryptocurrency per interval"
+            self.strat.execute(input_dt_dfs, print_orders=debug, save_positions=False)
 
         prev_portfolio = self.strat.portfolio_mgr.portfolio_hist[-1]
         cur_portfolio = Portfolio(
@@ -219,6 +210,7 @@ class BackTester:
             f" and rsi_percent_incr_threshold={getattr(self.strat, 'rsi_percent_incr_threshold', -1)}"
             f" and rsi trend span={getattr(self.strat, 'rsi_trend_span', -1)}"
             f" and indicator_length={self.strat.indicator_length}"
+            f" and trailing_stop_loss={self.strat.portfolio_mgr.trailing_stop_loss}"
         )
 
         print(f"Buy power left: ${cur_portfolio.buy_power}")
@@ -266,6 +258,7 @@ def create_strat(
     rsi_sell_threshold: float,
     rsi_percent_incr_threshold: float,
     rsi_trend_span: int,
+    trailing_stop_loss: float,
 ) -> BaseStrategy:
     return strat(
         broker=DEFAULT_BROKER,
@@ -286,6 +279,7 @@ def create_strat(
         rsi_sell_threshold=rsi_sell_threshold,
         rsi_percent_incr_threshold=rsi_percent_incr_threshold,
         rsi_trend_span=rsi_trend_span,
+        trailing_stop_loss=trailing_stop_loss,
     )
 
 
@@ -301,6 +295,7 @@ def conduct_back_test(
     rsi_sell_threshold: float,
     rsi_percent_incr_threshold: float,
     rsi_trend_span: int,
+    trailing_stop_loss: float,
     crypto_currency_codes: List[str],
     buy_power: float,
     span: int,
@@ -321,6 +316,7 @@ def conduct_back_test(
         rsi_sell_threshold,
         rsi_percent_incr_threshold,
         rsi_trend_span,
+        trailing_stop_loss,
     )
     back_tester = BackTester(
         strat,
@@ -365,6 +361,8 @@ if __name__ == "__main__":
     rsi_buy_thresholds = [55]
     rsi_sell_thresholds = [80]
 
+    trailing_stop_losses = numeric_range(0.01, 0.11, 0.01)
+
     strats_def = [
         FibVolRsiStrategy,
         # FibVolStrategy
@@ -380,6 +378,7 @@ if __name__ == "__main__":
         rsi_sell_threshold,
         rsi_percent_incr_threshold,
         rsi_trend_span,
+        trailing_stop_loss,
     ) in itertools.product(
         strats_def,
         p_diff_thresholds,
@@ -390,6 +389,7 @@ if __name__ == "__main__":
         rsi_sell_thresholds,
         rsi_percent_incr_thresholds,
         rsi_trend_spans,
+        trailing_stop_losses,
     ):
         conduct_back_test(
             strat_def,
@@ -403,6 +403,7 @@ if __name__ == "__main__":
             rsi_sell_threshold,
             rsi_percent_incr_threshold,
             rsi_trend_span,
+            trailing_stop_loss,
             crypto_currency_codes,
             buy_power,
             span,

@@ -11,6 +11,7 @@ from StratDaemon.utils.constants import (
     MAX_HOLDING_PER_CURRENCY,
     PERCENT_DIFF_THRESHOLD,
     RISK_FACTOR,
+    TRAILING_STOP_LOSS,
     VOL_WINDOW_SIZE,
 )
 import random
@@ -42,6 +43,7 @@ class FibVolStrategy(BaseStrategy):
         buy_power: float = BUY_POWER,
         max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
         indicator_length: int = DEFAULT_INDICATOR_LENGTH,
+        trailing_stop_loss: float = TRAILING_STOP_LOSS,
         name_override: str = None,
         **kwargs,
     ) -> None:
@@ -57,6 +59,7 @@ class FibVolStrategy(BaseStrategy):
             confirm_before_trade,
             risk_factor,
             buy_power,
+            trailing_stop_loss,
             max_holding_per_currency,
         )
         self.percent_diff_threshold = percent_diff_threshold

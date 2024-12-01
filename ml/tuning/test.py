@@ -41,6 +41,9 @@ class Objective(object):
             buy_power=1_000,
             span=trial.suggest_int("span", 30, 65, step=5),
             wait_time=trial.suggest_int("wait_time", 5, 65, step=5),
+            trailing_stop_loss=trial.suggest_float(
+                "trailing_stop_loss", 0.01, 0.21, step=0.01
+            ),
         )
         return portfolio_hist[-1].value, num_buy_trades + num_sell_trades
 
@@ -71,4 +74,5 @@ if __name__ == "__main__":
     )
     study.set_metric_names(["portfolio_value", "num_trades"])
     study.optimize(objective, n_trials=1_000)
-    print(study.best_trial)
+    for t in study.best_trials[:5]:
+        print(t.params, t.values)
