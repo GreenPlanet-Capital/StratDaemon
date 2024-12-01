@@ -11,3 +11,4 @@ plotly==5.24.0
 numpy==1.26.4
 more_itertools==10.5.0
 kaleido==0.2.1
+alpaca-py==0.33.1
