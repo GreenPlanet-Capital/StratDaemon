@@ -101,10 +101,10 @@ class FibVolRsiStrategy(FibVolStrategy):
         )  # stabilizing at support
 
         # if vol is increasing, it's risky to buy since it could be either resistance or breakthrough
-        is_within_rsi_lvl = df.iloc[-1].rsi < self.rsi_buy_threshold
+        is_within_rsi_lvl = df.iloc[-1].rsi <= self.rsi_buy_threshold
         risk_signal = (
-            is_within_fib_lvl and is_vol_increasing and is_within_rsi_lvl
-        )  # or is_rsi_increasing
+            is_within_fib_lvl and is_within_rsi_lvl and self.is_rsi_increasing(df)
+        )
         return confident_signal or self.is_rsi_increasing(df), risk_signal
 
     def execute_sell_condition(
@@ -118,9 +118,8 @@ class FibVolRsiStrategy(FibVolStrategy):
             is_within_fib_lvl and is_vol_increasing
         )  # trying to break resistance
 
-        is_within_rsi_lvl = df.iloc[-1].rsi > self.rsi_sell_threshold
-        is_rsi_increasing = self.is_indicator_increasing(df, "rsi")
-        risk_signal = is_within_rsi_lvl and not is_rsi_increasing
+        is_within_rsi_lvl = df.iloc[-1].rsi >= self.rsi_sell_threshold
+        risk_signal = is_within_rsi_lvl and self.is_rsi_decreasing(df)
 
         # if vol increasing, it's safe to sell but misses out on some opportunities
         # so use rsi to decide to take the risk and hold
