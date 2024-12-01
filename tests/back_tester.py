@@ -23,7 +23,7 @@ from collections import defaultdict
 # DEFAULT_BROKER = KrakenBroker()
 DEFAULT_BROKER = CryptoCompareBroker()
 CONSTRICT_RANGE = 24 * 60 * 7
-SAVE_GRAPH = True
+SAVE_GRAPH = False
 
 
 class BackTester:
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     rsi_buy_thresholds = [55]
     rsi_sell_thresholds = [80]
 
-    trailing_stop_losses = numeric_range(0.01, 0.11, 0.01)
+    trailing_stop_losses = [0.05]
 
     strats_def = [
         FibVolRsiStrategy,

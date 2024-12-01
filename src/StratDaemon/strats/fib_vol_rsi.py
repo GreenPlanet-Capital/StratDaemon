@@ -130,17 +130,22 @@ class FibVolRsiStrategy(FibVolStrategy):
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> float:
         sr = df.iloc[-1]
-        return (1 - percent_difference(sr.close, order.limit_price)) + (
-            1
-            - abs(
-                sr.rsi
-                - (
-                    self.rsi_buy_threshold
-                    if order.side == "buy"
-                    else self.rsi_sell_threshold
+        return (
+            (1 - abs(percent_difference(sr.close, order.limit_price)))
+            + (
+                1
+                - abs(
+                    percent_difference(
+                        sr.rsi,
+                        (
+                            self.rsi_buy_threshold
+                            if order.side == "buy"
+                            else self.rsi_sell_threshold
+                        ),
+                    )
                 )
             )
-        )
+        ) / 2
 
     def transform_df(
         self, df: DataFrame[CryptoHistorical]

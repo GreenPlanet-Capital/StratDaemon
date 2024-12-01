@@ -135,7 +135,7 @@ class FibVolStrategy(BaseStrategy):
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder
     ) -> float:
         sr = df.iloc[-1]
-        return 1 - percent_difference(sr.close, order.limit_price)
+        return 1 - abs(percent_difference(sr.close, order.limit_price))
 
     def get_auto_generated_orders(
         self, currency_code: str, df: DataFrame[CryptoHistorical]
@@ -161,5 +161,8 @@ class FibVolStrategy(BaseStrategy):
                 amount=self.max_amount_per_order,
             ),
         ]
+
+        for order in orders:
+            order.amount *= self.get_score(df, order)
 
         return orders
