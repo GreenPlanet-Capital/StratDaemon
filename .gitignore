@@ -17,6 +17,7 @@ fib_*.json
 render_logs
 *.sqlite3
 kraken
+*_analysis.html
 
 # Distribution / packaging
 .Python
