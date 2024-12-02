@@ -1,29 +1,25 @@
 from datetime import datetime
-import itertools
 from typing import Generator, List, Dict, Tuple
 from devtools import pprint
-import pandas as pd
+import optuna
+from pydantic import BaseModel
 from tqdm import tqdm
+from StratDaemon.integration.broker.alpaca import AlpacaBroker
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder, Portfolio
 from StratDaemon.portfolio.graph_positions import GraphHandler
-from StratDaemon.portfolio.portfolio_manager import PortfolioManager
 from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
-from StratDaemon.integration.broker.crypto_compare import CryptoCompareBroker
-from StratDaemon.integration.broker.kraken import KrakenBroker
 from pandera.typing import DataFrame
-from math import isclose
 import plotly.express as px
 import os
-import random
-from more_itertools import numeric_range
 import numpy as np
 from collections import defaultdict
 
-DEFAULT_BROKER = KrakenBroker()
+# DEFAULT_BROKER = KrakenBroker()
 # DEFAULT_BROKER = CryptoCompareBroker()
-CONSTRICT_RANGE = 24 * 60 * 7
+DEFAULT_BROKER = AlpacaBroker()
+CONSTRICT_RANGE = 24 * 60 * 6
 SAVE_GRAPH = True
 
 
@@ -42,9 +38,7 @@ class BackTester:
         strat_split = self.strat.name.split("_")
         self.strat_name = f"{strat_split[0]}_{strat_split[-1]}"
         self.all_data_dfs = [
-            self.broker.get_crypto_historical(
-                currency_code, "hour", pull_from_api=False
-            )
+            self.broker.get_crypto_historical(currency_code, "hour", pull_from_api=False)
             for currency_code in self.currency_codes
         ]
         self.ensure_data_dfs_consistent()
@@ -80,9 +74,7 @@ class BackTester:
     ) -> None:
         strat_rsi_buy_threshold = getattr(self.strat, "rsi_buy_threshold", -1)
         strat_rsi_sell_threshold = getattr(self.strat, "rsi_sell_threshold", -1)
-        strat_rsi_percent_incr_threshold = getattr(
-            self.strat, "rsi_percent_incr_threshold", -1
-        )
+        strat_rsi_percent_incr_threshold = getattr(self.strat, "rsi_percent_incr_threshold", -1)
         strat_rsi_trend_span = getattr(self.strat, "rsi_trend_span", -1)
 
         if save_graph:
@@ -158,9 +150,7 @@ class BackTester:
             return "{:.10f}".format(a / b) if b != 0 else 0
 
         for _, holding in holdings.items():
-            holding["average_price"] = safe_div(
-                holding["average_price"], holding["num_buy_orders"]
-            )
+            holding["average_price"] = safe_div(holding["average_price"], holding["num_buy_orders"])
 
         pprint(dict(holdings))
 
@@ -190,9 +180,7 @@ class BackTester:
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
-            orders = self.strat.execute(
-                input_dt_dfs, print_orders=debug, save_positions=False
-            )
+            orders = self.strat.execute(input_dt_dfs, print_orders=debug, save_positions=False)
             transactions.extend(orders)
 
         prev_portfolio = self.strat.portfolio_mgr.portfolio_hist[-1]
@@ -215,20 +203,21 @@ class BackTester:
         num_buy_trades = self.strat.portfolio_mgr.num_buy_trades
         num_sell_trades = self.strat.portfolio_mgr.num_sell_trades
         print(
-            f"Ending with ${round(cur_portfolio.value, 2)} after {num_buy_trades} "
-            f"buy trades and {num_sell_trades} sell trades over "
-            f"{constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes"
-            f" making trades every {self.wait_time} minutes"
-            f" with percent_diff_threshold={self.strat.percent_diff_threshold}"
-            f" and vol_window_size={self.strat.vol_window_size}"
-            f" and span={self.span}"
-            f" and risk_factor={self.strat.risk_factor}"
-            f" and rsi_buy_threshold={getattr(self.strat, 'rsi_buy_threshold', -1)}"
-            f" and rsi_sell_threshold={getattr(self.strat, 'rsi_sell_threshold', -1)}"
-            f" and rsi_percent_incr_threshold={getattr(self.strat, 'rsi_percent_incr_threshold', -1)}"
-            f" and rsi trend span={getattr(self.strat, 'rsi_trend_span', -1)}"
-            f" and indicator_length={self.strat.indicator_length}"
-            f" and trailing_stop_loss={self.strat.portfolio_mgr.trailing_stop_loss}"
+            f"Ending with ${round(cur_portfolio.value, 2)}\n"
+            f"  after {num_buy_trades} buy trades \n"
+            f"  and {num_sell_trades} sell trades over \n"
+            f"  {constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes\n"
+            f"  making trades every {self.wait_time} minutes\n"
+            f"  with percent_diff_threshold={self.strat.percent_diff_threshold}\n"
+            f"  and vol_window_size={self.strat.vol_window_size}\n"
+            f"  and span={self.span}\n"
+            f"  and risk_factor={self.strat.risk_factor}\n"
+            f"  and rsi_buy_threshold={getattr(self.strat, 'rsi_buy_threshold', -1)}\n"
+            f"  and rsi_sell_threshold={getattr(self.strat, 'rsi_sell_threshold', -1)}\n"
+            f"  and rsi_percent_incr_threshold={getattr(self.strat, 'rsi_percent_incr_threshold', -1)}\n"
+            f"  and rsi trend span={getattr(self.strat, 'rsi_trend_span', -1)}\n"
+            f"  and indicator_length={self.strat.indicator_length}\n"
+            f"  and trailing_stop_loss={self.strat.portfolio_mgr.trailing_stop_loss}\n"
         )
 
         print(f"Buy power left: ${cur_portfolio.buy_power}")
@@ -256,9 +245,7 @@ class BackTester:
         n = len(self.all_data_dfs[0])
         start_idx = span if constrict_range is None else n - constrict_range
         if constrict_range is not None:
-            assert (
-                n > constrict_range
-            ), "Start index must be less than the length of the data"
+            assert n > constrict_range, "Start index must be less than the length of the data"
         for i in range(start_idx, n, wait_time):
             yield [df[i - span + 1 : i + 1] for df in self.all_data_dfs]
 
@@ -271,7 +258,6 @@ def create_strat(
     max_holding_per_currency: float,
     p_diff: float,
     vol_window: int,
-    risk_factor: float,
     indicator_length: int,
     rsi_buy_threshold: float,
     rsi_sell_threshold: float,
@@ -290,7 +276,7 @@ def create_strat(
         confirm_before_trade=False,
         percent_diff_threshold=p_diff,
         vol_window_size=vol_window,
-        risk_factor=risk_factor,
+        risk_factor=-1,
         buy_power=buy_power,
         max_holding_per_currency=max_holding_per_currency,
         indicator_length=indicator_length,
@@ -308,7 +294,6 @@ def conduct_back_test(
     max_holding_per_currency: float,
     p_diff: float,
     vol_window: int,
-    risk_factor: float,
     indicator_length: int,
     rsi_buy_threshold: float,
     rsi_sell_threshold: float,
@@ -329,7 +314,6 @@ def conduct_back_test(
         max_holding_per_currency,
         p_diff,
         vol_window,
-        risk_factor,
         indicator_length,
         rsi_buy_threshold,
         rsi_sell_threshold,
@@ -352,79 +336,52 @@ def conduct_back_test(
     )
 
 
+class Parameters(BaseModel):
+    p_diff: float
+    vol_window: int
+    indicator_length: int
+    rsi_buy_threshold: float
+    rsi_sell_threshold: float
+    rsi_percent_incr_threshold: float
+    rsi_trend_span: int
+    trailing_stop_loss: float
+    span: int
+    wait_time: int
+
+
+def load_best_study_parameters() -> Parameters:
+    study = optuna.load_study(study_name="fib_vol_rsi", storage="sqlite:///optuna_db.sqlite3")
+    return Parameters.model_validate(study.best_trials[0].params)
+
+
 if __name__ == "__main__":
-    # p_diff_thresholds = [0.008, 0.009, 0.01, 0.02, 0.03, 0.05]
-    # p_diff_thresholds = numeric_range(0.003, 0.011, 0.001)
-    # p_diff_thresholds = numeric_range(0.02, 0.11, 0.01)
-    # p_diff_thresholds = numeric_range(0.005, 0.05, 0.001)
-    p_diff_thresholds = [0.02]
-    # vol_window_sizes = [10]
+    params = load_best_study_parameters()
     # crypto_currency_codes = ["DOGE", "SHIB"]
-    crypto_currency_codes = ["SHIB"]
-    wait_times = [45]
-    # risk_factors = list(numeric_range(0.05, 0.3, 0.05)) + list(
-    #     numeric_range(0.3, 0.6, 0.1))
-    risk_factors = [0.1]
-    buy_power = 1_000
+    crypto_currency_codes = ["DOGE"]
+    
+    # Modifications
+    params.trailing_stop_loss = 0.005
+    params.wait_time = 1
+
+    strat_def = FibVolRsiStrategy
     max_amount_per_order = 100
     max_holding_per_currency = 500
+    buy_power = 1_000
 
-    # span, indicator_length, vol_window_size
-    interval_inputs = [(50, 20, 18)]
-
-    # rsi_percent_incr_thresholds = numeric_range(0.01, 0.4, 0.01)
-    rsi_percent_incr_thresholds = [0.1]
-    # rsi_trend_spans = list(range(5, 20))
-    rsi_trend_spans = [5]
-
-    rsi_buy_thresholds = [55]
-    rsi_sell_thresholds = [80]
-
-    trailing_stop_losses = [0.05]
-
-    strats_def = [
-        FibVolRsiStrategy,
-        # FibVolStrategy
-    ]
-
-    for (
+    conduct_back_test(
         strat_def,
-        p_diff,
-        wait_time,
-        risk_factor,
-        (span, indicator_length, vol_window),
-        rsi_buy_threshold,
-        rsi_sell_threshold,
-        rsi_percent_incr_threshold,
-        rsi_trend_span,
-        trailing_stop_loss,
-    ) in itertools.product(
-        strats_def,
-        p_diff_thresholds,
-        wait_times,
-        risk_factors,
-        interval_inputs,
-        rsi_buy_thresholds,
-        rsi_sell_thresholds,
-        rsi_percent_incr_thresholds,
-        rsi_trend_spans,
-        trailing_stop_losses,
-    ):
-        conduct_back_test(
-            strat_def,
-            max_amount_per_order,
-            max_holding_per_currency,
-            p_diff,
-            vol_window,
-            risk_factor,
-            indicator_length,
-            rsi_buy_threshold,
-            rsi_sell_threshold,
-            rsi_percent_incr_threshold,
-            rsi_trend_span,
-            trailing_stop_loss,
-            crypto_currency_codes,
-            buy_power,
-            span,
-            wait_time,
-        )
+        max_amount_per_order,
+        max_holding_per_currency,
+        params.p_diff,
+        params.vol_window,
+        params.indicator_length,
+        params.rsi_buy_threshold,
+        params.rsi_sell_threshold,
+        params.rsi_percent_incr_threshold,
+        params.rsi_trend_span,
+        params.trailing_stop_loss,
+        crypto_currency_codes,
+        buy_power,
+        params.span,
+        params.wait_time,
+    )

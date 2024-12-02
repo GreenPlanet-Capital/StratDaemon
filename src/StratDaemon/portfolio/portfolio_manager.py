@@ -3,6 +3,7 @@ from math import isclose
 from typing import Dict, List, Tuple
 from pandera.typing import DataFrame
 from datetime import datetime
+import pandas as pd
 
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder, Portfolio
 from StratDaemon.utils.constants import TRAILING_STOP_LOSS
@@ -52,14 +53,8 @@ class PortfolioManager:
         self, dt_dfs: Dict[str, DataFrame[CryptoHistorical]]
     ) -> List[CryptoOrder]:
         prev_portfolio = self.portfolio_hist[-1]
-        cur_portfolio = Portfolio(
-            value=prev_portfolio.value,
-            buy_power=prev_portfolio.buy_power,
-            timestamp=self.get_lst_timestamp(dt_dfs),
-        )
         cur_prices_dt = self.get_cur_prices_dt(dt_dfs)
-        executed_orders = []
-        final_holdings = prev_portfolio.holdings
+        new_sell_orders = []
 
         for holding in prev_portfolio.holdings:
             currency_code = holding.currency_code
@@ -72,22 +67,12 @@ class PortfolioManager:
                     amount=cur_price * holding.quantity,
                     asset_price=cur_price,
                     quantity=holding.quantity,
-                    timestamp=cur_portfolio.timestamp,
+                    timestamp=self.get_lst_timestamp(dt_dfs),
                     limit_price=-1,
                 )
-                nxt_holdings, new_orders = self.handle_sell_order(
-                    cur_prices_dt, order, prev_portfolio, cur_portfolio
-                )
-                final_holdings = nxt_holdings
-                executed_orders.extend(new_orders)
+                new_sell_orders.append(order)
 
-        cur_portfolio.holdings = final_holdings
-        cur_portfolio.value = self.calculate_portfolio_value(
-            cur_portfolio, cur_prices_dt
-        )
-        cur_portfolio.timestamp = self.get_lst_timestamp(dt_dfs)
-        self.portfolio_hist.append(cur_portfolio)
-        return executed_orders
+        return new_sell_orders
 
     def process_order(
         self,
@@ -95,7 +80,7 @@ class PortfolioManager:
         order: CryptoOrder,
     ) -> List[CryptoOrder]:
         prev_portfolio = self.portfolio_hist[-1]
-
+        
         cur_prices_dt = self.get_cur_prices_dt(dt_dfs)
         cur_portfolio = Portfolio(
             value=prev_portfolio.value,
@@ -159,6 +144,7 @@ class PortfolioManager:
         # This also updates the amount of each holding
         total_holdings_amt = self.get_total_holdings_amt(cur_prices_dt, cur_holdings)
         order.amount = min(order.amount, sum(total_holdings_amt[currency_code]))
+        original_order_amount = order.amount
 
         for holding in cur_holdings:
             if holding.currency_code != order.currency_code:
@@ -174,6 +160,8 @@ class PortfolioManager:
 
             if self.is_zero(order.amount):
                 break
+        
+        order.amount = original_order_amount
 
         return [
             holding for holding in cur_holdings if not self.is_zero(holding.amount)

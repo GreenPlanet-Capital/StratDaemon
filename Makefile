@@ -25,7 +25,8 @@ vis-ml:
 clean-ml:
 	rm -f optuna_db.sqlite3
 
-clean: check_clean
+# clean: check_clean
+clean:
 	rm -f results/performance.csv results/*.png
 
 pull:

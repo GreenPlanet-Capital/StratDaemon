@@ -215,6 +215,7 @@ class BaseStrategy:
 
                 currency_code = order.currency_code
                 executed_orders = self.portfolio_mgr.process_order(dt_dfs, order)
+                
 
                 for exec_order in executed_orders:
                     if self.paper_trade:
