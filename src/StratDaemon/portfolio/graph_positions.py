@@ -60,8 +60,6 @@ class GraphHandler:
                         fig,
                         df.loc[list_locs[0]],
                         pos,
-                        "Enter" if pos.side == 1 else "Exit",
-                        df.index[0],
                     )
 
             # Upper Bound
@@ -125,9 +123,7 @@ class GraphHandler:
             fig.show()
 
     @staticmethod
-    def add_graph_annotations(
-        input_fig, list_locs, position: CryptoOrder, post_type, start_index=0
-    ):
+    def add_graph_annotations(input_fig, list_locs, position: CryptoOrder):
         input_fig.add_annotation(
             x=list_locs["timestamp"].index[0],
             y=list_locs["close"].iloc[0],

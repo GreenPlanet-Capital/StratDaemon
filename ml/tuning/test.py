@@ -44,6 +44,7 @@ class Objective(object):
             trailing_stop_loss=trial.suggest_float(
                 "trailing_stop_loss", 0.01, 0.21, step=0.01
             ),
+            save_graph=False,
         )
         return portfolio_hist[-1].value, num_buy_trades + num_sell_trades
 

@@ -18,6 +18,7 @@ render_logs
 *.sqlite3
 kraken
 *_analysis.html
+marketstore/data
 
 # Distribution / packaging
 .Python

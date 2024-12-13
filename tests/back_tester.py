@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Generator, List, Dict, Tuple
 from devtools import pprint
 import optuna
@@ -16,11 +16,8 @@ import os
 import numpy as np
 from collections import defaultdict
 
-# DEFAULT_BROKER = KrakenBroker()
-# DEFAULT_BROKER = CryptoCompareBroker()
 DEFAULT_BROKER = AlpacaBroker()
-CONSTRICT_RANGE = 24 * 60 * 6
-SAVE_GRAPH = True
+CONSTRICT_RANGE = 24 * 60 * 1
 
 
 class BackTester:
@@ -38,7 +35,9 @@ class BackTester:
         strat_split = self.strat.name.split("_")
         self.strat_name = f"{strat_split[0]}_{strat_split[-1]}"
         self.all_data_dfs = [
-            self.broker.get_crypto_historical(currency_code, "hour", pull_from_api=False)
+            self.broker.get_crypto_historical(
+                currency_code, "hour", pull_from_api=False
+            )
             for currency_code in self.currency_codes
         ]
         self.ensure_data_dfs_consistent()
@@ -74,7 +73,9 @@ class BackTester:
     ) -> None:
         strat_rsi_buy_threshold = getattr(self.strat, "rsi_buy_threshold", -1)
         strat_rsi_sell_threshold = getattr(self.strat, "rsi_sell_threshold", -1)
-        strat_rsi_percent_incr_threshold = getattr(self.strat, "rsi_percent_incr_threshold", -1)
+        strat_rsi_percent_incr_threshold = getattr(
+            self.strat, "rsi_percent_incr_threshold", -1
+        )
         strat_rsi_trend_span = getattr(self.strat, "rsi_trend_span", -1)
 
         if save_graph:
@@ -150,7 +151,9 @@ class BackTester:
             return "{:.10f}".format(a / b) if b != 0 else 0
 
         for _, holding in holdings.items():
-            holding["average_price"] = safe_div(holding["average_price"], holding["num_buy_orders"])
+            holding["average_price"] = safe_div(
+                holding["average_price"], holding["num_buy_orders"]
+            )
 
         pprint(dict(holdings))
 
@@ -163,6 +166,17 @@ class BackTester:
     ) -> List[Portfolio]:
         print(f"Starting with ${self.buy_power}")
         transactions: List[CryptoOrder] = []
+        start_dt, end_dt = (
+            (
+                self.all_data_dfs[0].iloc[0].timestamp
+                if constrict_range is None
+                else self.all_data_dfs[0].iloc[-1].timestamp
+                - timedelta(minutes=constrict_range)
+            ),
+            self.all_data_dfs[0].iloc[-1].timestamp,
+        )
+        print(f"From {start_dt} to {end_dt}")
+        print(constrict_range)
 
         for dfs in tqdm(
             self.get_data_by_interval(self.span, constrict_range, self.wait_time),
@@ -180,7 +194,9 @@ class BackTester:
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
-            orders = self.strat.execute(input_dt_dfs, print_orders=debug, save_positions=False)
+            orders = self.strat.execute(
+                input_dt_dfs, print_orders=debug, save_positions=False
+            )
             transactions.extend(orders)
 
         prev_portfolio = self.strat.portfolio_mgr.portfolio_hist[-1]
@@ -225,6 +241,7 @@ class BackTester:
         portfolio_hist = self.strat.portfolio_mgr.portfolio_hist
 
         if save_data:
+            print("Saving portfolio data. This may take a while...")
             self.save_portfolio(
                 portfolio_hist,
                 num_buy_trades,
@@ -245,7 +262,9 @@ class BackTester:
         n = len(self.all_data_dfs[0])
         start_idx = span if constrict_range is None else n - constrict_range
         if constrict_range is not None:
-            assert n > constrict_range, "Start index must be less than the length of the data"
+            assert (
+                n > constrict_range
+            ), "Start index must be less than the length of the data"
         for i in range(start_idx, n, wait_time):
             yield [df[i - span + 1 : i + 1] for df in self.all_data_dfs]
 
@@ -304,6 +323,7 @@ def conduct_back_test(
     buy_power: float,
     span: int,
     wait_time: int,
+    save_graph: bool = False,
 ) -> Tuple[List[Portfolio], int, int]:
     assert span - (indicator_length - 1) > vol_window, "Interval inputs are invalid"
     strat = create_strat(
@@ -332,7 +352,7 @@ def conduct_back_test(
         constrict_range=CONSTRICT_RANGE,
         save_data=True,
         debug=False,
-        save_graph=SAVE_GRAPH,
+        save_graph=False,
     )
 
 
@@ -350,15 +370,31 @@ class Parameters(BaseModel):
 
 
 def load_best_study_parameters() -> Parameters:
-    study = optuna.load_study(study_name="fib_vol_rsi", storage="sqlite:///optuna_db.sqlite3")
-    return Parameters.model_validate(study.best_trials[0].params)
+    try:
+        study = optuna.load_study(
+            study_name="fib_vol_rsi", storage="sqlite:///optuna_db.sqlite3"
+        )
+        return Parameters.model_validate(study.best_trials[0].params)
+    except Exception as e:
+        print(f"Error encountered while loading study parameters: {e}")
+        return Parameters(
+            p_diff=0.02,
+            vol_window=18,
+            indicator_length=20,
+            rsi_buy_threshold=55,
+            rsi_sell_threshold=80,
+            rsi_percent_incr_threshold=0.1,
+            rsi_trend_span=5,
+            trailing_stop_loss=0.05,
+            span=50,
+            wait_time=45,
+        )
 
 
 if __name__ == "__main__":
     params = load_best_study_parameters()
-    # crypto_currency_codes = ["DOGE", "SHIB"]
-    crypto_currency_codes = ["DOGE"]
-    
+    crypto_currency_codes = ["DOGE", "SHIB"]
+
     # Modifications
     params.trailing_stop_loss = 0.005
     params.wait_time = 1
@@ -384,4 +420,5 @@ if __name__ == "__main__":
         buy_power,
         params.span,
         params.wait_time,
+        save_graph=True,
     )

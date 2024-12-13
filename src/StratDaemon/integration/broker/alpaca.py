@@ -1,20 +1,21 @@
-import glob
-import os
-import os
-from typing import List
 import pandas as pd
 from StratDaemon.integration.broker.base import BaseBroker
+from StratDaemon.integration.db.alpaca import AlpacaMarketstoreDB
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder
 from pandera.typing import DataFrame, Series
 from alpaca.data.historical import CryptoHistoricalDataClient
 from alpaca.data.requests import CryptoBarsRequest
 from alpaca.data.timeframe import TimeFrame
+from datetime import datetime
+
+DATA_BEGIN_DATE = "2024-01-01"
 
 
 class AlpacaBroker(BaseBroker):
     def __init__(self):
         super().__init__()
         self.client = CryptoHistoricalDataClient()
+        self.db = AlpacaMarketstoreDB()
 
     def authenticate(self):
         pass
@@ -26,28 +27,27 @@ class AlpacaBroker(BaseBroker):
         pull_from_api: bool = False,
         is_backtest: bool = False,
     ) -> DataFrame[CryptoHistorical]:
-        
         symbol = f"{currency_code}/USD"
-        
+
+        start_dt, end_dt = (
+            datetime.strptime(DATA_BEGIN_DATE, "%Y-%m-%d"),
+            datetime.now(),
+        )
         request_params = CryptoBarsRequest(
             symbol_or_symbols=[symbol],
             timeframe=TimeFrame.Minute,
-            start="2024-11-23",
-            end="2024-11-30"
+            start=DATA_BEGIN_DATE,
+            end=end_dt.strftime("%Y-%m-%d"),
         )
-        
+
         if pull_from_api:
             bars = self.client.get_crypto_bars(request_params)
             data = bars.data[symbol]
             df = pd.DataFrame([d.model_dump() for d in data])
-            df['timestamp'] = df['timestamp'].dt.tz_localize(None)
+            self.db.update_ticker_data(currency_code, df)
         else:
-            local_data_path = f"alpaca_{currency_code}_historical_data.json"
-            if not os.path.exists(local_data_path):
-                raise FileNotFoundError(f"Path does not exist: {local_data_path}")
-            df = pd.read_json(
-                local_data_path,
-            )
+            df = self.db.get_ticker_data(currency_code, start_dt, end_dt)
+        df["timestamp"] = df["timestamp"].dt.tz_localize(None)
         return CryptoHistorical.validate(df)
 
     def buy_crypto_market(
