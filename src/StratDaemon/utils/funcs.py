@@ -30,3 +30,7 @@ def percent_difference(value1, value2):
 
 def print_dt(*args, **kw):
     print("[%s]" % (datetime.now()), *args, **kw)
+
+
+def create_db_uid(start_dt: datetime, end_dt: datetime) -> str:
+    return f"{start_dt.strftime('%s')}_{end_dt.strftime('%s')}"

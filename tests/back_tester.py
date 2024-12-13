@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Generator, List, Dict, Tuple
 from devtools import pprint
 import optuna
+import pandas as pd
 from pydantic import BaseModel
 from tqdm import tqdm
 from StratDaemon.integration.broker.alpaca import AlpacaBroker
@@ -16,8 +17,9 @@ import os
 import numpy as np
 from collections import defaultdict
 
+from StratDaemon.utils.funcs import create_db_uid
+
 DEFAULT_BROKER = AlpacaBroker()
-CONSTRICT_RANGE = 24 * 60 * 1
 
 
 class BackTester:
@@ -78,31 +80,32 @@ class BackTester:
         )
         strat_rsi_trend_span = getattr(self.strat, "rsi_trend_span", -1)
 
-        if save_graph:
-            sliced_dfs = [
-                df[(len(df) - CONSTRICT_RANGE) :] if CONSTRICT_RANGE is not None else df
-                for df in self.all_data_dfs
-            ]
-            GraphHandler.graph_positions(
-                {
-                    currency_code: self.strat.transform_df(df)
-                    for currency_code, df in zip(self.currency_codes, sliced_dfs)
-                },
-                transactions,
-                show_enter_exit=True,
-            )
-            fig = px.line(
-                x=[p.timestamp for p in portfolio_hist],
-                y=[p.value for p in portfolio_hist],
-            )
-            fig.write_image(
-                f"results/"
-                f"{'_'.join(self.currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
-                f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
-                f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
-                f"_{self.strat.indicator_length}_{self.strat.portfolio_mgr.trailing_stop_loss}"
-                f"_{self.strat.vol_window_size}_backtest.png"
-            )
+        # FIXME: Implement a more efficient way of saving graph data
+        # if save_graph:
+        #     sliced_dfs = [
+        #         df[(len(df) - CONSTRICT_RANGE) :] if CONSTRICT_RANGE is not None else df
+        #         for df in self.all_data_dfs
+        #     ]
+        #     GraphHandler.graph_positions(
+        #         {
+        #             currency_code: self.strat.transform_df(df)
+        #             for currency_code, df in zip(self.currency_codes, sliced_dfs)
+        #         },
+        #         transactions,
+        #         show_enter_exit=True,
+        #     )
+        #     fig = px.line(
+        #         x=[p.timestamp for p in portfolio_hist],
+        #         y=[p.value for p in portfolio_hist],
+        #     )
+        #     fig.write_image(
+        #         f"results/"
+        #         f"{'_'.join(self.currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
+        #         f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
+        #         f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
+        #         f"_{self.strat.indicator_length}_{self.strat.portfolio_mgr.trailing_stop_loss}"
+        #         f"_{self.strat.vol_window_size}_backtest.png"
+        #     )
 
         csv_path = "results/performance.csv"
         if not os.path.exists(csv_path):
@@ -159,37 +162,33 @@ class BackTester:
 
     def run(
         self,
-        constrict_range: int | None = None,
+        start_dt: datetime | None = None,
+        end_dt: datetime | None = None,
         save_data: bool = False,
         save_graph: bool = False,
         debug: bool = False,
-    ) -> List[Portfolio]:
+    ) -> Tuple[List[Portfolio], int, int]:
         print(f"Starting with ${self.buy_power}")
         transactions: List[CryptoOrder] = []
-        start_dt, end_dt = (
-            (
-                self.all_data_dfs[0].iloc[0].timestamp
-                if constrict_range is None
-                else self.all_data_dfs[0].iloc[-1].timestamp
-                - timedelta(minutes=constrict_range)
-            ),
-            self.all_data_dfs[0].iloc[-1].timestamp,
+
+        if start_dt is None and end_dt is None:
+            start_dt, end_dt = (
+                self.all_data_dfs[0].iloc[0].timestamp,
+                self.all_data_dfs[0].iloc[-1].timestamp,
+            )
+        print(f"Testing from {start_dt} to {end_dt}")
+        total_time = (
+            int((end_dt - start_dt).total_seconds() / 60 / self.wait_time) - self.span + 1
         )
-        print(f"From {start_dt} to {end_dt}")
-        print(constrict_range)
 
         for dfs in tqdm(
-            self.get_data_by_interval(self.span, constrict_range, self.wait_time),
+            self.get_data_by_interval(start_dt, end_dt, self.span, self.wait_time),
             desc=f"Backtesting {'|'.join(self.currency_codes)} cryptos with {self.strat_name} strategy",
-            total=(
-                (len(self.all_data_dfs[0]) // self.wait_time) - self.span
-                if constrict_range is None
-                else constrict_range // self.wait_time
-            ),
+            total=total_time,
         ):
             assert all(
                 len(df) == len(dfs[0]) == self.span for df in dfs
-            ), "All dataframes must have the same length as the span"
+            ), f"All dataframes must have the same length as the span: {[len(df) for df in dfs]}"
 
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
@@ -222,7 +221,7 @@ class BackTester:
             f"Ending with ${round(cur_portfolio.value, 2)}\n"
             f"  after {num_buy_trades} buy trades \n"
             f"  and {num_sell_trades} sell trades over \n"
-            f"  {constrict_range if constrict_range is not None else len(self.all_data_dfs[0]) - self.span} minutes\n"
+            f"  {total_time} minutes\n"
             f"  making trades every {self.wait_time} minutes\n"
             f"  with percent_diff_threshold={self.strat.percent_diff_threshold}\n"
             f"  and vol_window_size={self.strat.vol_window_size}\n"
@@ -256,16 +255,26 @@ class BackTester:
         )
 
     def get_data_by_interval(
-        self, span: int, constrict_range: int | None = None, wait_time: int = 0
+        self,
+        start_dt: datetime,
+        end_dt: datetime,
+        span: int,
+        wait_time: int = 0,
     ) -> Generator[DataFrame[CryptoHistorical], None, None]:
         # FIXME: Implement a more efficient way of getting data by interval
-        n = len(self.all_data_dfs[0])
-        start_idx = span if constrict_range is None else n - constrict_range
-        if constrict_range is not None:
-            assert (
-                n > constrict_range
-            ), "Start index must be less than the length of the data"
-        for i in range(start_idx, n, wait_time):
+        df = self.all_data_dfs[0]
+        df = df[(df.timestamp >= start_dt) & (df.timestamp <= end_dt)]
+        df = df.set_index("timestamp", drop=True)
+        df = (
+            df.reindex(pd.date_range(start_dt, end_dt, freq="1 min"))
+            .reset_index()
+            .rename(columns={"index": "date"})
+        )
+        df = df.replace(to_replace=0, value=np.nan)
+        df = df.interpolate(method="linear")
+
+        n = len(df)
+        for i in range(span, n, wait_time):
             yield [df[i - span + 1 : i + 1] for df in self.all_data_dfs]
 
 
@@ -323,7 +332,8 @@ def conduct_back_test(
     buy_power: float,
     span: int,
     wait_time: int,
-    save_graph: bool = False,
+    start_dt: datetime | None = None,
+    end_dt: datetime | None = None,
 ) -> Tuple[List[Portfolio], int, int]:
     assert span - (indicator_length - 1) > vol_window, "Interval inputs are invalid"
     strat = create_strat(
@@ -349,10 +359,11 @@ def conduct_back_test(
         wait_time=wait_time,
     )
     return back_tester.run(
-        constrict_range=CONSTRICT_RANGE,
-        save_data=True,
-        debug=False,
+        start_dt=start_dt,
+        end_dt=end_dt,
+        save_data=False,
         save_graph=False,
+        debug=False,
     )
 
 
@@ -369,10 +380,12 @@ class Parameters(BaseModel):
     wait_time: int
 
 
-def load_best_study_parameters() -> Parameters:
+def load_best_study_parameters(start_dt: str, end_dt: str) -> Parameters:
     try:
+        db_uid = create_db_uid(start_dt, end_dt)
         study = optuna.load_study(
-            study_name="fib_vol_rsi", storage="sqlite:///optuna_db.sqlite3"
+            study_name=f"fib_vol_rsi_{db_uid}",
+            storage=f"sqlite:///results/optuna_db.sqlite3",
         )
         return Parameters.model_validate(study.best_trials[0].params)
     except Exception as e:
@@ -392,7 +405,10 @@ def load_best_study_parameters() -> Parameters:
 
 
 if __name__ == "__main__":
-    params = load_best_study_parameters()
+    dt_now = datetime.now()
+    start_dt = dt_now - timedelta(days=7)
+    end_dt = dt_now
+    params = load_best_study_parameters(start_dt, end_dt)
     crypto_currency_codes = ["DOGE", "SHIB"]
 
     # Modifications
@@ -420,5 +436,6 @@ if __name__ == "__main__":
         buy_power,
         params.span,
         params.wait_time,
-        save_graph=True,
+        start_dt=datetime(2024, 2, 1),
+        end_dt=datetime(2024, 2, 2),
     )

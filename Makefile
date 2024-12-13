@@ -13,24 +13,23 @@ run-paper:
 get-results:
 	python tests/get_results.py $(ORDER)
 
-test: clean
+test:
 	python tests/back_tester.py
 
-test-ml: clean
+test-full: clean
+	PYTHONPATH="${PYTHONPATH}:ml" python tests/full_back_tester.py
+
+test-ml:
 	PYTHONPATH="${PYTHONPATH}:tests" python ml/tuning/test.py
 
 vis-ml:
 	optuna-dashboard sqlite:///optuna_db.sqlite3
 
-clean-ml:
-	rm -f optuna_db.sqlite3
+clean-full:
+	rm -f results/performance_full.csv
 
-# clean: check_clean
 clean:
 	rm -f results/performance.csv results/*.png
 
 pull:
 	python tests/pull_data.py
-
-check_clean:
-	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
