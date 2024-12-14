@@ -16,7 +16,7 @@ import os
 import numpy as np
 from collections import defaultdict
 
-from StratDaemon.utils.funcs import create_db_uid
+from StratDaemon.utils.funcs import create_db_uid, load_best_study_parameters
 
 DEFAULT_BROKER = AlpacaBroker()
 
@@ -342,43 +342,6 @@ def conduct_back_test(
         debug=False,
         prev_holdings=prev_holdings,
     )
-
-
-class Parameters(BaseModel):
-    p_diff: float
-    vol_window: int
-    indicator_length: int
-    rsi_buy_threshold: float
-    rsi_sell_threshold: float
-    rsi_percent_incr_threshold: float
-    rsi_trend_span: int
-    trailing_stop_loss: float
-    span: int
-    wait_time: int
-
-
-def load_best_study_parameters(start_dt: str, end_dt: str) -> Parameters:
-    try:
-        db_uid = create_db_uid(start_dt, end_dt)
-        study = optuna.load_study(
-            study_name=f"fib_vol_rsi_{db_uid}",
-            storage=f"sqlite:///results/optuna_db.sqlite3",
-        )
-        return Parameters.model_validate(study.best_trials[0].params)
-    except Exception as e:
-        print(f"Error encountered while loading study parameters: {e}")
-        return Parameters(
-            p_diff=0.02,
-            vol_window=18,
-            indicator_length=20,
-            rsi_buy_threshold=55,
-            rsi_sell_threshold=80,
-            rsi_percent_incr_threshold=0.1,
-            rsi_trend_span=5,
-            trailing_stop_loss=0.05,
-            span=50,
-            wait_time=45,
-        )
 
 
 if __name__ == "__main__":

@@ -7,8 +7,9 @@ from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from datetime import datetime, timedelta
 
+from StratDaemon.utils.funcs import load_best_study_parameters
 from ml.tuning.test import test_optuna
-from tests.back_tester import BackTester, conduct_back_test, load_best_study_parameters
+from tests.back_tester import conduct_back_test
 
 START_DT = datetime(2024, 1, 1)
 END_DT = datetime.now() - timedelta(days=1)
