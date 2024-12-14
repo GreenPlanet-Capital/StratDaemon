@@ -39,7 +39,6 @@ RH_HISTORICAL_INTERVAL = "15second"
 RH_HISTORICAL_SPAN = "hour"
 CRYPTO_COMPARE_HISTORICAL_INTERVAL = "minute"
 
-RISK_FACTOR = 0.10  # deprecated (used in old strategy)
 RESTART_WAIT_TIME = 45 * 60  # Time to wait before restarting the daemon (in seconds)
 
 CRYPTO_CURRENCY_CODES = ["SHIB", "DOGE"]

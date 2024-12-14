@@ -2,10 +2,9 @@ import os
 from typing import Annotated
 import typer
 from StratDaemon.daemons.strat import StratDaemon
-from StratDaemon.integration.confirmation.crypto_db import CryptoDBConfirmation
 from StratDaemon.integration.notification.sms import SMSNotification
 from StratDaemon.models.crypto import CryptoLimitOrder
-from StratDaemon.strats.fib_vol import FibVolStrategy
+from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from StratDaemon.utils.constants import WAIT_TIME, cfg_parser as strat_cfg_parser
 from StratDaemon.integration.broker.robinhood import RobinhoodBroker
@@ -23,7 +22,6 @@ def start(
     path_to_holdings: Annotated[str, typer.Option("--path-to-holdings", "-pth")] = None,
     integration: Annotated[str, typer.Option("--integration", "-i")] = "robinhood",
     notification: Annotated[str, typer.Option("--notification", "-n")] = "sms",
-    confirmation: Annotated[str, typer.Option("--confirmation", "-c")] = "crypto_db",
     path_to_currency_codes: Annotated[
         str, typer.Option("--path-to-currency-codes", "-ptc")
     ] = None,
@@ -34,9 +32,6 @@ def start(
         float, typer.Option("--max-amount-per-order", "-mapo")
     ] = 0.0,
     paper_trade: Annotated[bool, typer.Option("--paper-trade", "-p")] = False,
-    confirm_before_trade: Annotated[
-        bool, typer.Option("--confirm-before-trade", "-cbt")
-    ] = False,
     poll_on_start: Annotated[bool, typer.Option("--poll-on-start", "-pos")] = True,
 ):
     match integration:
@@ -45,25 +40,7 @@ def start(
         case _:
             raise typer.Exit("Invalid integration. Needs to be one of: robinhood")
 
-    if confirm_before_trade:
-        match notification:
-            case "sms":
-                notif = SMSNotification()
-            case _:
-                raise typer.Exit("Invalid notification. Needs to be one of: sms")
-
-        match confirmation:
-            case "crypto_db":
-                conf = CryptoDBConfirmation()
-            case _:
-                raise typer.Exit("Invalid confirmation. Needs to be one of: crypto_db")
-    else:
-        notif = None
-        conf = None
-
     match strategy:
-        case "fib_vol":
-            strat_class = FibVolStrategy
         case "fib_vol_rsi":
             strat_class = FibVolRsiStrategy
         case _:
@@ -81,15 +58,13 @@ def start(
     else:
         currency_codes = None
 
-    strat = strat_class(
+    strat: BaseStrategy = strat_class(
         broker,
-        notif,
-        conf,
+        SMSNotification(),
         currency_codes,
         auto_generate_orders,
         max_amount_per_order,
         paper_trade,
-        confirm_before_trade,
     )
 
     if path_to_holdings is not None:

@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple
 from StratDaemon.integration.broker.base import BaseBroker
-from StratDaemon.integration.confirmation.base import BaseConfirmation
 from StratDaemon.integration.notification.base import BaseNotification
 from StratDaemon.models.crypto import CryptoHistorical, CryptoLimitOrder, CryptoOrder
 from pandera.typing import DataFrame, Series
@@ -12,11 +11,8 @@ from StratDaemon.portfolio.portfolio_manager import PortfolioManager
 from StratDaemon.utils.constants import (
     BUY_POWER,
     MAX_HOLDING_PER_CURRENCY,
-    MAX_POLL_COUNT,
-    POLL_INTERVAL_SEC,
     RH_HISTORICAL_INTERVAL,
     RH_HISTORICAL_SPAN,
-    RISK_FACTOR,
     TRAILING_STOP_LOSS,
 )
 from collections import defaultdict
@@ -30,13 +26,10 @@ class BaseStrategy:
         name: str,
         broker: BaseBroker,
         notif: BaseNotification,
-        conf: BaseConfirmation,
         currency_codes: List[str] = None,
         auto_generate_orders: bool = False,
         max_amount_per_order: float = 0.0,
         paper_trade: bool = False,
-        confirm_before_trade: bool = False,
-        risk_factor: float = RISK_FACTOR,
         buy_power: float = BUY_POWER,
         trailing_stop_loss: float = TRAILING_STOP_LOSS,
         max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
@@ -44,14 +37,11 @@ class BaseStrategy:
         self.name = name
         self.broker = broker
         self.notif = notif
-        self.conf = conf
         self.limit_orders: List[CryptoLimitOrder] = []
         self.currency_codes = currency_codes or []
         self.auto_generate_orders = auto_generate_orders
         self.max_amount_per_order = max_amount_per_order
         self.paper_trade = paper_trade
-        self.confirm_before_trade = confirm_before_trade
-        self.risk_factor = risk_factor
         self.max_holding_per_currency = max_holding_per_currency
         self.portfolio_mgr = PortfolioManager(
             currency_codes, buy_power, trailing_stop_loss
@@ -207,12 +197,6 @@ class BaseStrategy:
             )
 
             if confident_signal or risk_signal:
-                if self.confirm_before_trade:
-                    if not self.send_notif_wait_for_conf(order):
-                        print_dt("Confirmation failed, skipping order.")
-                        continue
-                    print_dt("Confirmation received, proceeding with order.")
-
                 currency_code = order.currency_code
                 executed_orders = self.portfolio_mgr.process_order(dt_dfs, order)
                 
@@ -260,24 +244,6 @@ class BaseStrategy:
 
         with open(self.path_to_positions, "w") as f:
             json.dump(positions, f)
-
-    def send_notif_wait_for_conf(self, order: CryptoOrder) -> None:
-        uid = self.notif.notify_order(order)
-        is_confirmed = False
-
-        try:
-            self.conf.init_confirmation(uid)
-            print_dt(f"Waiting for confirmation for order with uid={uid}...")
-            for _ in range(MAX_POLL_COUNT):
-                time.sleep(POLL_INTERVAL_SEC)
-
-                if is_confirmed := self.conf.check_confirmation(uid):
-                    break
-            self.conf.delete_confirmation(uid)
-        except Exception as e:
-            print_dt(f"Error during confirmation: {e}")
-
-        return is_confirmed
 
     def execute_buy_condition(
         self, df: DataFrame[CryptoHistorical], order: CryptoLimitOrder

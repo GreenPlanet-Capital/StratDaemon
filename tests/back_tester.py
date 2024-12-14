@@ -9,7 +9,6 @@ from StratDaemon.integration.broker.alpaca import AlpacaBroker
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder, Portfolio
 from StratDaemon.portfolio.graph_positions import GraphHandler
 from StratDaemon.strats.base import BaseStrategy
-from StratDaemon.strats.fib_vol import FibVolStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from pandera.typing import DataFrame
 import plotly.express as px
@@ -25,7 +24,7 @@ DEFAULT_BROKER = AlpacaBroker()
 class BackTester:
     def __init__(
         self,
-        strat: FibVolRsiStrategy | FibVolStrategy,
+        strat: FibVolRsiStrategy,
         currency_codes: List[str],
         buy_power: float,
         span: int = 30,
@@ -77,38 +76,11 @@ class BackTester:
         )
         strat_rsi_trend_span = getattr(self.strat, "rsi_trend_span", -1)
 
-        # FIXME: Implement a more efficient way of saving graph data
-        # if save_graph:
-        #     sliced_dfs = [
-        #         df[(len(df) - CONSTRICT_RANGE) :] if CONSTRICT_RANGE is not None else df
-        #         for df in self.all_data_dfs
-        #     ]
-        #     GraphHandler.graph_positions(
-        #         {
-        #             currency_code: self.strat.transform_df(df)
-        #             for currency_code, df in zip(self.currency_codes, sliced_dfs)
-        #         },
-        #         transactions,
-        #         show_enter_exit=True,
-        #     )
-        #     fig = px.line(
-        #         x=[p.timestamp for p in portfolio_hist],
-        #         y=[p.value for p in portfolio_hist],
-        #     )
-        #     fig.write_image(
-        #         f"results/"
-        #         f"{'_'.join(self.currency_codes)}_{self.strat_name}_{self.strat.percent_diff_threshold}"
-        #         f"_{self.span}_{self.wait_time}_{self.strat.risk_factor}"
-        #         f"_{strat_rsi_buy_threshold}_{strat_rsi_sell_threshold}"
-        #         f"_{self.strat.indicator_length}_{self.strat.portfolio_mgr.trailing_stop_loss}"
-        #         f"_{self.strat.vol_window_size}_backtest.png"
-        #     )
-
         csv_path = "results/performance.csv"
         if not os.path.exists(csv_path):
             with open(csv_path, "w") as f:
                 f.write(
-                    "currency_codes,strategy_name,percent_diff_threshold,span,wait_time,risk_factor,"
+                    "currency_codes,strategy_name,percent_diff_threshold,span,wait_time,"
                     "rsi_buy_threshold,rsi_sell_threshold,rsi_percent_incr_threshold,"
                     "rsi_trend_span,indicator_length,trailing_stop_loss,"
                     "vol_window_size,final_value,num_buy_trades,num_sell_trades\n"
@@ -117,7 +89,7 @@ class BackTester:
         with open(csv_path, "a") as f:
             f.write(
                 f"{'|'.join(self.currency_codes)},{self.strat_name},"
-                f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},{self.strat.risk_factor},"
+                f"{self.strat.percent_diff_threshold},{self.span},{self.wait_time},"
                 f"{strat_rsi_buy_threshold},{strat_rsi_sell_threshold},{strat_rsi_percent_incr_threshold},"
                 f"{strat_rsi_trend_span},{self.strat.indicator_length},{self.strat.portfolio_mgr.trailing_stop_loss},"
                 f"{self.strat.vol_window_size},"
@@ -231,7 +203,6 @@ class BackTester:
             f"  with percent_diff_threshold={self.strat.percent_diff_threshold}\n"
             f"  and vol_window_size={self.strat.vol_window_size}\n"
             f"  and span={self.span}\n"
-            f"  and risk_factor={self.strat.risk_factor}\n"
             f"  and rsi_buy_threshold={getattr(self.strat, 'rsi_buy_threshold', -1)}\n"
             f"  and rsi_sell_threshold={getattr(self.strat, 'rsi_sell_threshold', -1)}\n"
             f"  and rsi_percent_incr_threshold={getattr(self.strat, 'rsi_percent_incr_threshold', -1)}\n"
@@ -274,7 +245,12 @@ class BackTester:
             df = df.interpolate(method="linear")
             df = df.reset_index().rename(columns={"index": "timestamp"})
 
-            assert not df.isnull().values.any(), f"Dataframe {i} has NaN values"
+            try:
+                assert not df.isnull().values.any(), f"Dataframe {i} has NaN values"
+            except AssertionError as e:
+                import pdb
+
+                pdb.set_trace()
             self.all_data_dfs[i] = df
 
         n = len(df)
@@ -300,15 +276,12 @@ def create_strat(
     return strat(
         broker=DEFAULT_BROKER,
         notif=None,
-        conf=None,
         currency_codes=crypto_currency_codes,
         auto_generate_orders=True,
         max_amount_per_order=max_amount_per_order,
         paper_trade=False,
-        confirm_before_trade=False,
         percent_diff_threshold=p_diff,
         vol_window_size=vol_window,
-        risk_factor=-1,
         buy_power=buy_power,
         max_holding_per_currency=max_holding_per_currency,
         indicator_length=indicator_length,
