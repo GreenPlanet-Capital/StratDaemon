@@ -17,7 +17,7 @@ test: clean
 	python tests/back_tester.py
 
 test-full: clean-full
-	PYTHONPATH="${PYTHONPATH}:ml" python tests/full_back_tester.py
+	PYTHONPATH="${PYTHONPATH}:ml" python tests/full_back_tester.py $(TYPE)
 
 test-ml:
 	PYTHONPATH="${PYTHONPATH}:tests" python ml/tuning/test.py

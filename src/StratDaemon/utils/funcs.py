@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from StratDaemon.utils.constants import (
     DEFAULT_INDICATOR_LENGTH,
     NUMERICAL_SPAN,
+    OPTUNA_DB_URL,
     PERCENT_DIFF_THRESHOLD,
     RSI_BUY_THRESHOLD,
     RSI_PERCENT_INCR_THRESHOLD,
@@ -72,7 +73,7 @@ def load_best_study_parameters(start_dt: str, end_dt: str) -> Parameters:
         db_uid = create_db_uid(start_dt, end_dt)
         study = optuna.load_study(
             study_name=f"fib_vol_rsi_{db_uid}",
-            storage=f"sqlite:///results/optuna_db.sqlite3",
+            storage=OPTUNA_DB_URL,
         )
         return Parameters.model_validate(study.best_trials[0].params)
     except Exception as e:

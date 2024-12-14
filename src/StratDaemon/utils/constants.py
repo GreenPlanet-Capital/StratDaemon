@@ -1,7 +1,7 @@
 import configparser
 import os
 
-CONFIG_FILE = "config.ini" if os.getenv("ENV") != "dev" else "config_dev.ini"
+CONFIG_FILE = "config_dev.ini"
 cfg_parser = configparser.ConfigParser()
 cfg_parser.read(CONFIG_FILE)
 
@@ -30,10 +30,9 @@ CRYPTO_COMPARE_API_KEY = cfg_parser.get("tests", "crypto_compare_api_key")
 
 CRYPTO_DB_URL = "https://comerciohub.tech/api/crypto"
 
-POLL_INTERVAL_SEC = cfg_parser.getint(
-    "confirmation", "polling_interval_sec", fallback=5
-)
-MAX_POLL_COUNT = cfg_parser.getint("confirmation", "max_poll_count", fallback=10)
+DB_USER = cfg_parser.get("db", "user")
+DB_PASSWORD = cfg_parser.get("db", "password")
+OPTUNA_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@localhost:5432/optuna"
 
 RH_HISTORICAL_INTERVAL = "15second"
 RH_HISTORICAL_SPAN = "hour"

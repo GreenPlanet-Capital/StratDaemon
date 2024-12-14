@@ -7,15 +7,16 @@ from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from datetime import datetime, timedelta
 
-from StratDaemon.utils.funcs import load_best_study_parameters
+from StratDaemon.utils.funcs import Parameters, load_best_study_parameters
 from ml.tuning.test import test_optuna
 from tests.back_tester import conduct_back_test
+from sys import argv
 
 START_DT = datetime(2024, 1, 1)
 END_DT = datetime.now() - timedelta(days=1)
 OPTUNA_DATA_SPAN = 1  # in weeks
 OPTUNA_RUN_FREQ = 24 * 60  # in minutes
-OPTUNA_TRIALS = 100
+OPTUNA_TRIALS = 10
 
 BUY_POWER = 1000
 MAX_AMOUNT_PER_ORDER = 100
@@ -29,23 +30,31 @@ class FullBackTester:
         self.buy_power = BUY_POWER
         self.holdings: List[CryptoOrder] = []
 
-    def conduct_full_back_test(self):
+    def conduct_full_back_test(
+        self, finetune_only: bool = False, backtest_only: bool = False
+    ):
+        print(
+            f"Starting full backtest with{'out' if backtest_only else ''} finetuning"
+            " and "
+            f"with{'out' if finetune_only else ''} backtesting"
+        )
         # start from 1 week after the start date & test from 2nd week
         start_dt = START_DT
         end_dt = START_DT + timedelta(weeks=OPTUNA_DATA_SPAN)
 
         while end_dt <= END_DT:
-            print(f"Finetuning optuna from {start_dt} to {end_dt}")
-            test_optuna(
-                start_dt,
-                end_dt,
-                self.currency_codes,
-                BUY_POWER,
-                MAX_AMOUNT_PER_ORDER,
-                MAX_HOLDING_PER_CURRENCY,
-                trials=OPTUNA_TRIALS,
-                debug=False,
-            )
+            if backtest_only is False:
+                print(f"Finetuning optuna from {start_dt} to {end_dt}")
+                test_optuna(
+                    start_dt,
+                    end_dt,
+                    self.currency_codes,
+                    BUY_POWER,
+                    MAX_AMOUNT_PER_ORDER,
+                    MAX_HOLDING_PER_CURRENCY,
+                    trials=OPTUNA_TRIALS,
+                    debug=False,
+                )
 
             optuna_start_dt = start_dt
             optuna_end_dt = end_dt
@@ -53,23 +62,22 @@ class FullBackTester:
             start_dt = end_dt
             end_dt = start_dt + timedelta(minutes=OPTUNA_RUN_FREQ)
 
-            print(f"Backtesting from {start_dt} to {end_dt}")
-            wait_time = self.backtest_after_optuna(
-                optuna_start_dt, optuna_end_dt, start_dt, end_dt
-            )
-            wait_time = 45
+            params = load_best_study_parameters(optuna_start_dt, optuna_end_dt)
+            wait_time = params.wait_time
+
+            if finetune_only is False:
+                print(f"Backtesting from {start_dt} to {end_dt}")
+                self.backtest_after_optuna(params, start_dt, end_dt)
 
             end_dt += timedelta(minutes=wait_time)
             start_dt = end_dt - timedelta(weeks=OPTUNA_DATA_SPAN)
 
     def backtest_after_optuna(
         self,
-        optuna_start_dt: datetime,
-        optuna_end_dt: datetime,
+        params: Parameters,
         start_dt: datetime,
         end_dt: datetime,
     ) -> int:
-        params = load_best_study_parameters(optuna_start_dt, optuna_end_dt)
         port_hist, buy_trades, sell_trades = conduct_back_test(
             self.strat,
             MAX_AMOUNT_PER_ORDER,
@@ -121,4 +129,10 @@ class FullBackTester:
 if __name__ == "__main__":
     currency_codes = ["DOGE", "SHIB"]
     full_back_tester = FullBackTester(FibVolRsiStrategy, currency_codes)
-    full_back_tester.conduct_full_back_test()
+    finetune_only = backtest_only = False
+    if len(argv) > 1:
+        if argv[1] == "finetune":
+            finetune_only = True
+        elif argv[1] == "backtest":
+            backtest_only = True
+    full_back_tester.conduct_full_back_test(finetune_only, backtest_only)

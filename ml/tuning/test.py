@@ -4,6 +4,7 @@ import optuna
 import optunahub
 from optuna.trial import Trial
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
+from StratDaemon.utils.constants import OPTUNA_DB_URL
 from StratDaemon.utils.funcs import create_db_uid
 from tests.back_tester import conduct_back_test
 
@@ -102,7 +103,7 @@ def test_optuna(
     study = optuna.create_study(
         directions=["maximize", "minimize"],
         sampler=sampler,
-        storage=f"sqlite:///results/optuna_db.sqlite3",
+        storage=OPTUNA_DB_URL,
         study_name=f"fib_vol_rsi_{db_uid}",
         load_if_exists=True,
     )

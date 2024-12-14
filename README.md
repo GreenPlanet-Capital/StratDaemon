@@ -4,18 +4,9 @@ Live monitor for managing financial assets with customized strategies
 
 ## Installation
 
-### Developer
-
 ```bash
 pip install -e .
 cp config.ini config_dev.ini
-export ENV=dev
-```
-
-### User
-
-```bash
-pip install .
 strat-daemon --install-completion zsh
 ```
 
@@ -24,8 +15,7 @@ strat-daemon --install-completion zsh
 ### Integration
 
 ```bash
-git update-index --assume-unchanged config.ini
-emacs config.ini # Change values as needed
+emacs config_dev.ini # Change values as needed
 ```
 
 ### Usage
@@ -36,7 +26,7 @@ Check the `examples/sample.py` script.
 
 #### For User
 
-- `config.ini` should be updated with your Robinhood credentials and other settings. This should be in directory where you run the below commands.
+- `config_dev.ini` should be updated with your Robinhood credentials and other settings. This should be in directory where you run the below commands.
 
 - Orders should be in JSON format. You can refer to `examples/sample_orders.json` for the structure.
 
