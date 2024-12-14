@@ -13,6 +13,7 @@ from StratDaemon.utils.constants import (
     RH_HISTORICAL_INTERVAL,
     RH_HISTORICAL_SPAN,
     TRAILING_STOP_LOSS,
+    TRAILING_TAKE_PROFIT,
 )
 from collections import defaultdict
 from uuid import uuid4
@@ -31,6 +32,7 @@ class BaseStrategy:
         paper_trade: bool = False,
         buy_power: float = BUY_POWER,
         trailing_stop_loss: float = TRAILING_STOP_LOSS,
+        trailing_take_profit: float = TRAILING_TAKE_PROFIT,
         max_holding_per_currency: float = MAX_HOLDING_PER_CURRENCY,
     ) -> None:
         self.name = name
@@ -43,7 +45,7 @@ class BaseStrategy:
         self.paper_trade = paper_trade
         self.max_holding_per_currency = max_holding_per_currency
         self.portfolio_mgr = PortfolioManager(
-            currency_codes, buy_power, trailing_stop_loss
+            currency_codes, buy_power, trailing_stop_loss, trailing_take_profit
         )
         self.path_to_positions = Path(f"{self.name}_{uuid4()}.json")
 

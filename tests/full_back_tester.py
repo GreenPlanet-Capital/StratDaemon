@@ -15,7 +15,7 @@ START_DT = datetime(2024, 1, 1)
 END_DT = datetime.now() - timedelta(days=1)
 OPTUNA_DATA_SPAN = 1  # in weeks
 OPTUNA_RUN_FREQ = 24 * 60  # in minutes
-OPTUNA_TRIALS = 10
+OPTUNA_TRIALS = 100
 
 BUY_POWER = 1000
 MAX_AMOUNT_PER_ORDER = 100
@@ -82,6 +82,7 @@ class FullBackTester:
             params.rsi_percent_incr_threshold,
             params.rsi_trend_span,
             params.trailing_stop_loss,
+            params.trailing_take_profit,
             self.currency_codes,
             self.buy_power,
             params.span,

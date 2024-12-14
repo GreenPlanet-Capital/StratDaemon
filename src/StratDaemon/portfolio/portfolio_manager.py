@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 
 from StratDaemon.models.crypto import CryptoHistorical, CryptoOrder, Portfolio
-from StratDaemon.utils.constants import TRAILING_STOP_LOSS
+from StratDaemon.utils.constants import TRAILING_STOP_LOSS, TRAILING_TAKE_PROFIT
 
 
 class PortfolioManager:
@@ -15,11 +15,13 @@ class PortfolioManager:
         currency_codes: List[str],
         buy_power: float,
         trailing_stop_loss: float = TRAILING_STOP_LOSS,
+        trailing_take_profit: float = TRAILING_TAKE_PROFIT,
         initial_timestamp: datetime | None = None,
     ):
         self.initial_buy_power = buy_power
         self.transaction_fee = 0.01
         self.trailing_stop_loss = trailing_stop_loss
+        self.trailing_take_profit = trailing_take_profit
         self.currency_codes = currency_codes
         self.num_buy_trades = self.num_sell_trades = 0
         self.portfolio_hist = [
@@ -46,7 +48,9 @@ class PortfolioManager:
     def compute_exit_signal(self, df: DataFrame[CryptoHistorical]) -> bool:
         df["highest"] = df["close"].cummax()
         df["trailingstop"] = df["highest"] * (1 - self.trailing_stop_loss)
+        df["trailingtakeprofit"] = df["highest"] * (1 + self.trailing_take_profit)
         df["exit_signal"] = df["close"] < df["trailingstop"]
+        df["exit_signal"] |= df["close"] > df["trailingtakeprofit"]
         return df["exit_signal"].iloc[-1]
 
     def check_stop_loss(
@@ -80,7 +84,7 @@ class PortfolioManager:
         order: CryptoOrder,
     ) -> List[CryptoOrder]:
         prev_portfolio = self.portfolio_hist[-1]
-        
+
         cur_prices_dt = self.get_cur_prices_dt(dt_dfs)
         cur_portfolio = Portfolio(
             value=prev_portfolio.value,
@@ -160,7 +164,7 @@ class PortfolioManager:
 
             if self.is_zero(order.amount):
                 break
-        
+
         order.amount = original_order_amount
 
         return [

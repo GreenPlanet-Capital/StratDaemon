@@ -48,7 +48,7 @@ class Objective(object):
             p_diff=trial.suggest_float("p_diff", 0.01, 0.11, step=0.01),
             vol_window=trial.suggest_int("vol_window", 10, 21),
             indicator_length=trial.suggest_int("indicator_length", 10, 21),
-            rsi_buy_threshold=trial.suggest_int("rsi_buy_threshold", 30, 55, step=5),
+            rsi_buy_threshold=trial.suggest_int("rsi_buy_threshold", 20, 50, step=5),
             rsi_sell_threshold=trial.suggest_int("rsi_sell_threshold", 50, 85, step=5),
             rsi_percent_incr_threshold=trial.suggest_float(
                 "rsi_percent_incr_threshold", 0.01, 0.41, step=0.01
@@ -59,6 +59,9 @@ class Objective(object):
             wait_time=trial.suggest_int("wait_time", 5, 65, step=5),
             trailing_stop_loss=trial.suggest_float(
                 "trailing_stop_loss", 0.01, 0.21, step=0.01
+            ),
+            trailing_take_profit=trial.suggest_float(
+                "trailing_take_profit", 0.05, 0.50, step=0.05
             ),
         )
         return portfolio_hist[-1].value, num_buy_trades + num_sell_trades

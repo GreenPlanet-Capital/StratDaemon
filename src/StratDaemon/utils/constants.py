@@ -61,3 +61,4 @@ RSI_PERCENT_INCR_THRESHOLD = 0.1
 RSI_TREND_SPAN = 5  # Number of minutes window to check difference between RSI Values
 
 TRAILING_STOP_LOSS = 0.05
+TRAILING_TAKE_PROFIT = 0.10

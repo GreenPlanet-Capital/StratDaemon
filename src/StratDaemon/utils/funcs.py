@@ -15,6 +15,7 @@ from StratDaemon.utils.constants import (
     RSI_SELL_THRESHOLD,
     RSI_TREND_SPAN,
     TRAILING_STOP_LOSS,
+    TRAILING_TAKE_PROFIT,
     VOL_WINDOW_SIZE,
     WAIT_TIME,
 )
@@ -61,6 +62,7 @@ class Parameters(BaseModel):
     rsi_percent_incr_threshold: float
     rsi_trend_span: int
     trailing_stop_loss: float
+    trailing_take_profit: float
     span: int
     wait_time: int
 
@@ -84,6 +86,7 @@ def load_best_study_parameters(start_dt: str, end_dt: str) -> Parameters:
             rsi_percent_incr_threshold=RSI_PERCENT_INCR_THRESHOLD,
             rsi_trend_span=RSI_TREND_SPAN,
             trailing_stop_loss=TRAILING_STOP_LOSS,
+            trailing_take_profit=TRAILING_TAKE_PROFIT,
             span=NUMERICAL_SPAN,
             wait_time=WAIT_TIME,
         )

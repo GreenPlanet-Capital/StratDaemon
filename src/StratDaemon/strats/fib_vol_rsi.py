@@ -14,6 +14,7 @@ from StratDaemon.utils.constants import (
     RSI_SELL_THRESHOLD,
     RSI_TREND_SPAN,
     TRAILING_STOP_LOSS,
+    TRAILING_TAKE_PROFIT,
     VOL_WINDOW_SIZE,
 )
 import pandas as pd
@@ -47,6 +48,7 @@ class FibVolRsiStrategy(BaseStrategy):
         rsi_percent_incr_threshold: float = RSI_PERCENT_INCR_THRESHOLD,
         rsi_trend_span: int = RSI_TREND_SPAN,
         trailing_stop_loss: float = TRAILING_STOP_LOSS,
+        trailing_take_profit: float = TRAILING_TAKE_PROFIT,
     ) -> None:
         super().__init__(
             "fib_retracements_volatility_rsi",
@@ -58,6 +60,7 @@ class FibVolRsiStrategy(BaseStrategy):
             paper_trade,
             buy_power,
             trailing_stop_loss,
+            trailing_take_profit,
             max_holding_per_currency,
         )
         self.percent_diff_threshold = percent_diff_threshold

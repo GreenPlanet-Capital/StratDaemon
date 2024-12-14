@@ -41,9 +41,6 @@ class AlpacaMarketstoreDB:
             else:
                 dt_pairs.append((consec[0], consec[-1]))
 
-        import pdb
-
-        pdb.set_trace()
         return dt_pairs
 
     def get_consec_dts(self, v: List[datetime], timedelta: timedelta) -> List[datetime]:

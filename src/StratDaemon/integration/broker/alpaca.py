@@ -1,5 +1,3 @@
-from collections import Counter
-from typing import List, Tuple
 import pandas as pd
 from StratDaemon.integration.broker.base import BaseBroker
 from StratDaemon.integration.db.alpaca import AlpacaMarketstoreDB
@@ -8,7 +6,7 @@ from pandera.typing import DataFrame, Series
 from alpaca.data.historical import CryptoHistoricalDataClient
 from alpaca.data.requests import CryptoBarsRequest
 from alpaca.data.timeframe import TimeFrame
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 DATA_BEGIN_DATE = "2024-01-01"
 

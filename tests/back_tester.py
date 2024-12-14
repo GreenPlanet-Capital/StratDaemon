@@ -11,12 +11,10 @@ from StratDaemon.portfolio.graph_positions import GraphHandler
 from StratDaemon.strats.base import BaseStrategy
 from StratDaemon.strats.fib_vol_rsi import FibVolRsiStrategy
 from pandera.typing import DataFrame
-import plotly.express as px
 import os
 import numpy as np
 from collections import defaultdict
-
-from StratDaemon.utils.funcs import create_db_uid, load_best_study_parameters
+from StratDaemon.utils.funcs import load_best_study_parameters
 
 DEFAULT_BROKER = AlpacaBroker()
 
@@ -150,18 +148,13 @@ class BackTester:
                 self.all_data_dfs[0].iloc[-1].timestamp,
             )
         print(f"Testing from {start_dt} to {end_dt}")
-        total_time = (
-            int(
-                (((end_dt - start_dt).total_seconds() / 60) - self.span)
-                / self.wait_time
-            )
-            + 1
-        )
+        total_time = (end_dt - start_dt).total_seconds() / 60
+        total_time_tqdm = int((total_time - self.span) / self.wait_time) + 1
 
         for dfs in tqdm(
             self.get_data_by_interval(start_dt, end_dt, self.span, self.wait_time),
             desc=f"Backtesting {'|'.join(self.currency_codes)} cryptos with {self.strat_name} strategy",
-            total=total_time,
+            total=total_time_tqdm,
         ):
             assert all(
                 len(df) == len(dfs[0]) == self.span for df in dfs
@@ -208,6 +201,7 @@ class BackTester:
             f"  and rsi trend span={getattr(self.strat, 'rsi_trend_span', -1)}\n"
             f"  and indicator_length={self.strat.indicator_length}\n"
             f"  and trailing_stop_loss={self.strat.portfolio_mgr.trailing_stop_loss}\n"
+            f"  and trailing_take_profit={self.strat.portfolio_mgr.trailing_take_profit}\n"
         )
 
         print(f"Buy power left: ${cur_portfolio.buy_power}")
@@ -270,6 +264,7 @@ def create_strat(
     rsi_percent_incr_threshold: float,
     rsi_trend_span: int,
     trailing_stop_loss: float,
+    trailing_take_profit: float,
 ) -> BaseStrategy:
     return strat(
         broker=DEFAULT_BROKER,
@@ -288,6 +283,7 @@ def create_strat(
         rsi_percent_incr_threshold=rsi_percent_incr_threshold,
         rsi_trend_span=rsi_trend_span,
         trailing_stop_loss=trailing_stop_loss,
+        trailing_take_profit=trailing_take_profit,
     )
 
 
@@ -303,6 +299,7 @@ def conduct_back_test(
     rsi_percent_incr_threshold: float,
     rsi_trend_span: int,
     trailing_stop_loss: float,
+    trailing_take_profit: float,
     crypto_currency_codes: List[str],
     buy_power: float,
     span: int,
@@ -326,6 +323,7 @@ def conduct_back_test(
         rsi_percent_incr_threshold,
         rsi_trend_span,
         trailing_stop_loss,
+        trailing_take_profit,
     )
     back_tester = BackTester(
         strat,
@@ -352,9 +350,6 @@ if __name__ == "__main__":
     crypto_currency_codes = ["DOGE", "SHIB"]
 
     # Modifications
-    params.trailing_stop_loss = 0.005
-    params.wait_time = 1
-
     strat_def = FibVolRsiStrategy
     max_amount_per_order = 100
     max_holding_per_currency = 500
@@ -372,6 +367,7 @@ if __name__ == "__main__":
         params.rsi_percent_incr_threshold,
         params.rsi_trend_span,
         params.trailing_stop_loss,
+        params.trailing_take_profit,
         crypto_currency_codes,
         buy_power,
         params.span,
