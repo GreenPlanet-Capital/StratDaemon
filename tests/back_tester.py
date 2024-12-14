@@ -166,7 +166,6 @@ class BackTester:
             assert all(
                 len(df) == len(dfs[0]) == self.span for df in dfs
             ), f"All dataframes must have the same length as the span: {[len(df) for df in dfs]}"
-
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
@@ -237,6 +236,8 @@ class BackTester:
         span: int,
         wait_time: int = 0,
     ) -> Generator[DataFrame[CryptoHistorical], None, None]:
+        dfs: List[DataFrame[CryptoHistorical]] = []
+
         # FIXME: Implement a more efficient way of getting data by interval
         for i, df in enumerate(self.all_data_dfs):
             df = df[(df.timestamp >= start_dt) & (df.timestamp <= end_dt)]
@@ -244,18 +245,15 @@ class BackTester:
             df = df.reindex(pd.date_range(start_dt, end_dt, freq="1 min"))
             df = df.interpolate(method="linear")
             df = df.reset_index().rename(columns={"index": "timestamp"})
+            df = df.fillna(method="ffill").fillna(method="bfill")
 
-            try:
-                assert not df.isnull().values.any(), f"Dataframe {i} has NaN values"
-            except AssertionError as e:
-                import pdb
+            assert not df.isnull().values.any(), f"Dataframe {i} has NaN values"
 
-                pdb.set_trace()
-            self.all_data_dfs[i] = df
+            dfs.append(df)
 
         n = len(df)
         for i in range(span, n, wait_time):
-            yield [df[i - span + 1 : i + 1] for df in self.all_data_dfs]
+            yield [df[i - span + 1 : i + 1] for df in dfs]
 
 
 def create_strat(

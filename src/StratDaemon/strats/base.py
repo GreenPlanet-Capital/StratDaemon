@@ -6,7 +6,6 @@ from StratDaemon.integration.notification.base import BaseNotification
 from StratDaemon.models.crypto import CryptoHistorical, CryptoLimitOrder, CryptoOrder
 from pandera.typing import DataFrame, Series
 from devtools import pprint
-import time
 from StratDaemon.portfolio.portfolio_manager import PortfolioManager
 from StratDaemon.utils.constants import (
     BUY_POWER,
@@ -166,7 +165,6 @@ class BaseStrategy:
         filtered_orders, order_signals = self.filter_orders(
             [order for order, _ in final_orders], dt_dfs
         )
-        stop_loss_orders = self.portfolio_mgr.check_stop_loss(dt_dfs)
 
         cnts = defaultdict(set)
         for order in filtered_orders:
@@ -175,8 +173,10 @@ class BaseStrategy:
             len(cnt) <= 1 for cnt in cnts.values()
         ), "Only one order (or none) of each type should be generated per cryptocurrency per interval"
 
+        stop_loss_orders = self.portfolio_mgr.check_stop_loss(dt_dfs)
         if stop_loss_orders and print_orders:
             print_dt(f"{len(stop_loss_orders)} stop loss orders found.")
+
         filtered_orders.extend(stop_loss_orders)
         order_signals.extend([(True, True) for _ in stop_loss_orders])
 
@@ -199,7 +199,6 @@ class BaseStrategy:
             if confident_signal or risk_signal:
                 currency_code = order.currency_code
                 executed_orders = self.portfolio_mgr.process_order(dt_dfs, order)
-                
 
                 for exec_order in executed_orders:
                     if self.paper_trade:

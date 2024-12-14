@@ -5,11 +5,9 @@ from StratDaemon.utils.funcs import print_dt
 
 
 class StratDaemon(BaseDaemon):
-    def __init__(
-        self, strat: BaseStrategy, poll_interval: int, poll_on_start: bool = True
-    ):
+    def __init__(self, strat: BaseStrategy, poll_interval: int):
         self.strat = strat
-        super().__init__(self.task, poll_interval, poll_on_start)
+        super().__init__(self.task, poll_interval)
 
     async def task(self):
         print_dt(

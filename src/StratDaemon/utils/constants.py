@@ -49,6 +49,7 @@ MAX_HOLDING_PER_CURRENCY = 100.0
 
 NUMERICAL_SPAN = 50  # number of data points to consider for the trend (use - RSI and Bollinger Bands for MA)
 WAIT_TIME = 45  # Time to wait before next iteration (in minutes)
+HEALTH_CHECK_WAIT_TIME = 5  # Time to wait before health check (in minutes)
 
 DEFAULT_INDICATOR_LENGTH = 20  # RSI Window size for Moving average
 VOL_WINDOW_SIZE = 18  # Bollinger Bands window size for Moving average

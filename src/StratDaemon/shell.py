@@ -21,7 +21,6 @@ def start(
     path_to_orders: Annotated[str, typer.Option("--path-to-orders", "-pto")] = None,
     path_to_holdings: Annotated[str, typer.Option("--path-to-holdings", "-pth")] = None,
     integration: Annotated[str, typer.Option("--integration", "-i")] = "robinhood",
-    notification: Annotated[str, typer.Option("--notification", "-n")] = "sms",
     path_to_currency_codes: Annotated[
         str, typer.Option("--path-to-currency-codes", "-ptc")
     ] = None,
@@ -32,7 +31,6 @@ def start(
         float, typer.Option("--max-amount-per-order", "-mapo")
     ] = 0.0,
     paper_trade: Annotated[bool, typer.Option("--paper-trade", "-p")] = False,
-    poll_on_start: Annotated[bool, typer.Option("--poll-on-start", "-pos")] = True,
 ):
     match integration:
         case "robinhood":
@@ -85,7 +83,7 @@ def start(
 
     strat.init()
     poll_interval = WAIT_TIME * 60
-    daemon = StratDaemon(strat, poll_interval, poll_on_start)
+    daemon = StratDaemon(strat, poll_interval)
     asyncio.run(daemon.start())
 
 
