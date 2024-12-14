@@ -13,10 +13,10 @@ run-paper:
 get-results:
 	python tests/get_results.py $(ORDER)
 
-test:
+test: clean
 	python tests/back_tester.py
 
-test-full: clean
+test-full: clean-full
 	PYTHONPATH="${PYTHONPATH}:ml" python tests/full_back_tester.py
 
 test-ml:

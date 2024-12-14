@@ -11,11 +11,10 @@ from ml.tuning.test import test_optuna
 from tests.back_tester import BackTester, conduct_back_test, load_best_study_parameters
 
 START_DT = datetime(2024, 1, 1)
-# END_DT = datetime.now()
-END_DT = datetime(2024, 2, 1)
+END_DT = datetime.now() - timedelta(days=1)
 OPTUNA_DATA_SPAN = 1  # in weeks
 OPTUNA_RUN_FREQ = 24 * 60  # in minutes
-OPTUNA_TRIALS = 1
+OPTUNA_TRIALS = 10
 
 BUY_POWER = 1000
 MAX_AMOUNT_PER_ORDER = 100
@@ -27,10 +26,10 @@ class FullBackTester:
         self.currency_codes = currency_codes
         self.strat = strat
         self.buy_power = BUY_POWER
-        self.holdings: List[CryptoOrder] = []  # TODO: keep track of holdings
+        self.holdings: List[CryptoOrder] = []
 
     def conduct_full_back_test(self):
-        # start from 1 week after the start date & test on first week
+        # start from 1 week after the start date & test from 2nd week
         start_dt = START_DT
         end_dt = START_DT + timedelta(weeks=OPTUNA_DATA_SPAN)
 
@@ -88,9 +87,11 @@ class FullBackTester:
             params.wait_time,
             start_dt=start_dt,
             end_dt=end_dt,
+            prev_holdings=self.holdings,
         )
         final_port = port_hist[-1]
         self.buy_power = final_port.buy_power
+        self.holdings = final_port.holdings
         self.save_result(start_dt, end_dt, final_port.value, buy_trades, sell_trades)
         return params.wait_time
 
@@ -102,7 +103,7 @@ class FullBackTester:
         num_buy_trades: int,
         num_sell_trades: int,
     ):
-        csv_path = "results/performance.csv"
+        csv_path = "results/performance_full.csv"
         if not os.path.exists(csv_path):
             with open(csv_path, "w") as f:
                 f.write(

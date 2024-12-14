@@ -52,9 +52,6 @@ class BackTester:
         assert len(self.currency_codes) == len(
             self.all_data_dfs
         ), "Currency codes and data must be of the same length"
-        assert all(
-            len(df) == len(self.all_data_dfs[0]) for df in self.all_data_dfs
-        ), "All dataframes must have the same length in all_data_dfs"
 
     def ensure_data_dfs_consistent(self) -> None:
         dates = self.all_data_dfs[0].timestamp
@@ -167,9 +164,13 @@ class BackTester:
         save_data: bool = False,
         save_graph: bool = False,
         debug: bool = False,
+        prev_holdings: List[CryptoOrder] | None = None,
     ) -> Tuple[List[Portfolio], int, int]:
         print(f"Starting with ${self.buy_power}")
         transactions: List[CryptoOrder] = []
+
+        if prev_holdings is not None:
+            self.strat.portfolio_mgr.portfolio_hist[-1].holdings.extend(prev_holdings)
 
         if start_dt is None and end_dt is None:
             start_dt, end_dt = (
@@ -178,7 +179,11 @@ class BackTester:
             )
         print(f"Testing from {start_dt} to {end_dt}")
         total_time = (
-            int((end_dt - start_dt).total_seconds() / 60 / self.wait_time) - self.span + 1
+            int(
+                (((end_dt - start_dt).total_seconds() / 60) - self.span)
+                / self.wait_time
+            )
+            + 1
         )
 
         for dfs in tqdm(
@@ -262,16 +267,15 @@ class BackTester:
         wait_time: int = 0,
     ) -> Generator[DataFrame[CryptoHistorical], None, None]:
         # FIXME: Implement a more efficient way of getting data by interval
-        df = self.all_data_dfs[0]
-        df = df[(df.timestamp >= start_dt) & (df.timestamp <= end_dt)]
-        df = df.set_index("timestamp", drop=True)
-        df = (
-            df.reindex(pd.date_range(start_dt, end_dt, freq="1 min"))
-            .reset_index()
-            .rename(columns={"index": "date"})
-        )
-        df = df.replace(to_replace=0, value=np.nan)
-        df = df.interpolate(method="linear")
+        for i, df in enumerate(self.all_data_dfs):
+            df = df[(df.timestamp >= start_dt) & (df.timestamp <= end_dt)]
+            df = df.set_index("timestamp", drop=True)
+            df = df.reindex(pd.date_range(start_dt, end_dt, freq="1 min"))
+            df = df.interpolate(method="linear")
+            df = df.reset_index().rename(columns={"index": "timestamp"})
+
+            assert not df.isnull().values.any(), f"Dataframe {i} has NaN values"
+            self.all_data_dfs[i] = df
 
         n = len(df)
         for i in range(span, n, wait_time):
@@ -334,6 +338,7 @@ def conduct_back_test(
     wait_time: int,
     start_dt: datetime | None = None,
     end_dt: datetime | None = None,
+    prev_holdings: List[CryptoOrder] | None = None,
 ) -> Tuple[List[Portfolio], int, int]:
     assert span - (indicator_length - 1) > vol_window, "Interval inputs are invalid"
     strat = create_strat(
@@ -364,6 +369,7 @@ def conduct_back_test(
         save_data=False,
         save_graph=False,
         debug=False,
+        prev_holdings=prev_holdings,
     )
 
 
