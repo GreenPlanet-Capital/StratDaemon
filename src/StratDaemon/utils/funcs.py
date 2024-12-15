@@ -69,7 +69,41 @@ class Parameters(BaseModel):
     wait_time: int
 
 
-def load_best_study_parameters(start_dt: datetime, end_dt: datetime) -> Parameters:
+DEFAULT_PARAMS = Parameters(
+    p_diff=PERCENT_DIFF_THRESHOLD,
+    vol_window=VOL_WINDOW_SIZE,
+    indicator_length=DEFAULT_INDICATOR_LENGTH,
+    rsi_buy_threshold=RSI_BUY_THRESHOLD,
+    rsi_sell_threshold=RSI_SELL_THRESHOLD,
+    rsi_percent_incr_threshold=RSI_PERCENT_INCR_THRESHOLD,
+    rsi_trend_span=RSI_TREND_SPAN,
+    trailing_stop_loss=TRAILING_STOP_LOSS,
+    trailing_take_profit=TRAILING_TAKE_PROFIT,
+    span=NUMERICAL_SPAN,
+    wait_time=WAIT_TIME,
+)
+
+
+def load_best_study_parameters(
+    start_dt: datetime, end_dt: datetime, fallback_nearest: bool = True
+) -> Parameters:
+    db_uid = create_db_uid(start_dt, end_dt)
+    try:
+        study = optuna.load_study(db_uid, storage=OPTUNA_DB_URL)
+        return Parameters.model_validate(study.best_trials[0].params)
+    except:
+        if fallback_nearest is True:
+            print("No study found for given date range. Loading nearest study")
+            return load_best_study_parameters_nearest(start_dt, end_dt)
+        else:
+            raise Exception(
+                "No study found for given date range. Set fallback_nearest=True to load nearest study."
+            )
+
+
+def load_best_study_parameters_nearest(
+    start_dt: datetime, end_dt: datetime
+) -> Parameters:
     try:
         studies = optuna.get_all_study_names(storage=OPTUNA_DB_URL)
         study_dts: List[Tuple[datetime, datetime]] = []
@@ -88,6 +122,7 @@ def load_best_study_parameters(start_dt: datetime, end_dt: datetime) -> Paramete
             for study_dt in study_dts
         ]
         idx = dt_diffs.index(min(dt_diffs))
+        # FIXME: take best among multiple studies relatively close to date instead of closest to the given date
         study_name = studies[idx]
 
         print(

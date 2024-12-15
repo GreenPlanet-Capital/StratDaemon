@@ -35,14 +35,15 @@ class FullBackTester:
     def conduct_full_back_test(
         self, finetune_only: bool = False, backtest_only: bool = False
     ):
+        # start from 1 week after the start date & test from 2nd week
+        start_dt = START_DT
+        end_dt = START_DT + timedelta(weeks=OPTUNA_DATA_SPAN)
         print(
             f"Starting full backtest with{'out' if backtest_only else ''} finetuning"
             " and "
             f"with{'out' if finetune_only else ''} backtesting"
+            f" for {(end_dt - start_dt).days} days"
         )
-        # start from 1 week after the start date & test from 2nd week
-        start_dt = START_DT
-        end_dt = START_DT + timedelta(weeks=OPTUNA_DATA_SPAN)
 
         while end_dt <= END_DT:
             if backtest_only is False:
@@ -64,14 +65,14 @@ class FullBackTester:
             start_dt = end_dt
             end_dt = start_dt + timedelta(minutes=OPTUNA_RUN_FREQ)
 
-            params = load_best_study_parameters(optuna_start_dt, optuna_end_dt)
-            wait_time = params.wait_time
-
             if finetune_only is False:
+                params = load_best_study_parameters(
+                    optuna_start_dt, optuna_end_dt, fallback_nearest=False
+                )
                 print(f"Backtesting from {start_dt} to {end_dt}")
                 self.backtest_after_optuna(params, start_dt, end_dt)
+                # end_dt += timedelta(minutes=params.wait_time) # this is needed but is harder to test
 
-            end_dt += timedelta(minutes=wait_time)
             start_dt = end_dt - timedelta(weeks=OPTUNA_DATA_SPAN)
 
     def backtest_after_optuna(
