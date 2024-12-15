@@ -23,7 +23,7 @@ test-ml:
 	PYTHONPATH="${PYTHONPATH}:tests" python ml/tuning/test.py
 
 vis-ml:
-	optuna-dashboard sqlite:///optuna_db.sqlite3
+	optuna-dashboard postgresql://postgres:mypass@localhost:5432/optuna
 
 clean-full:
 	rm -f results/performance_full.csv

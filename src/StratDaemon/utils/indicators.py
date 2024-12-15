@@ -40,7 +40,6 @@ def add_rsi(
 
 def add_trends_upwards(df: DataFrame[CryptoHistorical]) -> DataFrame[CryptoHistorical]:
     sma_50, sma_200 = sma(df, "close")
-    # sma_50, sma_200 = sma(df, "SUPERT_14_3.0")
     df["trends_upwards"] = sma_50 > sma_200
     return df
 
