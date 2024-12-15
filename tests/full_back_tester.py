@@ -16,7 +16,7 @@ START_DT = datetime(2024, 1, 1)
 END_DT = datetime.now() - timedelta(days=1)
 OPTUNA_DATA_SPAN = 1  # in weeks
 OPTUNA_RUN_FREQ = 24 * 60  # in minutes
-OPTUNA_TRIALS = 10
+OPTUNA_TRIALS = 1
 
 BUY_POWER = 1000
 MAX_AMOUNT_PER_ORDER = 100

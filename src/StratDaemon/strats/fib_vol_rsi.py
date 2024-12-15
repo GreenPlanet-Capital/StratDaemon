@@ -23,6 +23,7 @@ from StratDaemon.utils.indicators import (
     add_boll_diff,
     add_fib_ret_lvls,
     add_rsi,
+    add_super_trend,
     add_trends_upwards,
 )
 
@@ -175,6 +176,7 @@ class FibVolRsiStrategy(BaseStrategy):
         self, df: DataFrame[CryptoHistorical]
     ) -> DataFrame[CryptoHistorical]:
         df = add_boll_diff(df, self.indicator_length)
+        df = add_super_trend(df, atr_length=14, multiplier=3)
         df = add_trends_upwards(df)
         df = add_fib_ret_lvls(df, df["trends_upwards"].iloc[-1])
         df = add_rsi(df, self.indicator_length)

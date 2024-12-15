@@ -4,7 +4,7 @@ COMMAND="make test-full TYPE=finetune"
 
 tmux \
 new-window \
-${COMMAND} > .output \; \
+${COMMAND} \; \
 split-window \
 ${COMMAND} \; \
 split-window -h \

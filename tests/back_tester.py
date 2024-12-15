@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Generator, List, Dict, Tuple
 from devtools import pprint
 import optuna
@@ -343,7 +343,7 @@ def conduct_back_test(
 
 
 if __name__ == "__main__":
-    dt_now = datetime.now()
+    dt_now = datetime.now().replace(second=0, microsecond=0)
     start_dt = dt_now - timedelta(days=7)
     end_dt = dt_now
     params = load_best_study_parameters(start_dt, end_dt)
@@ -372,6 +372,6 @@ if __name__ == "__main__":
         buy_power,
         params.span,
         params.wait_time,
-        start_dt=datetime(2024, 2, 1),
-        end_dt=datetime(2024, 2, 2),
+        start_dt=start_dt,
+        end_dt=end_dt,
     )

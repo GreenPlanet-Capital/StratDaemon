@@ -1,3 +1,4 @@
+import pandas as pd
 from pandera.typing import DataFrame
 from StratDaemon.models.crypto import CryptoHistorical
 from StratDaemon.utils.constants import FIB_VALUES
@@ -38,8 +39,27 @@ def add_rsi(
 
 
 def add_trends_upwards(df: DataFrame[CryptoHistorical]) -> DataFrame[CryptoHistorical]:
+    sma_50, sma_200 = sma(df, "close")
+    # sma_50, sma_200 = sma(df, "SUPERT_14_3.0")
+    df["trends_upwards"] = sma_50 > sma_200
+    return df
+
+
+def sma(df: DataFrame, col: str) -> DataFrame:
     n = len(df)
-    sma_50 = ta.sma(df["close"], length=n // 2)
-    sma_200 = ta.sma(df["close"], length=n)
-    df["trends_upwards"] = sma_50 >= sma_200
+    sma_50 = ta.sma(df[col], length=n // 2)
+    sma_200 = ta.sma(df[col], length=n)
+    return sma_50, sma_200
+
+
+def add_super_trend(
+    df: DataFrame[CryptoHistorical], atr_length: int, multiplier: float
+) -> DataFrame:
+    df["atr"] = ta.atr(df["high"], df["low"], df["close"], length=atr_length)
+    super_trend = ta.supertrend(
+        df["high"], df["low"], df["close"], atr_length, multiplier
+    )
+    super_trend = super_trend.fillna(method="bfill")
+    super_trend["SUPERT_14_3.0"].iloc[0] = super_trend["SUPERT_14_3.0"].iloc[1]
+    df = pd.concat([df, super_trend], axis=1)
     return df

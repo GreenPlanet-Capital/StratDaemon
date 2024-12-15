@@ -56,7 +56,7 @@ class AlpacaBroker(BaseBroker):
 
         start_dt, end_dt = (
             datetime.strptime(DATA_BEGIN_DATE, "%Y-%m-%d").replace(tzinfo=timezone.utc),
-            datetime.now(tz=timezone.utc),
+            datetime.now(tz=timezone.utc).replace(second=0, microsecond=0),
         )
 
         if pull_from_api:
