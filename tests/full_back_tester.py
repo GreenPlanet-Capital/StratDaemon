@@ -46,6 +46,7 @@ class FullBackTester:
         )
 
         while end_dt <= END_DT:
+            # TODO: revisit this logic
             if backtest_only is False:
                 print(f"Finetuning optuna from {start_dt} to {end_dt}")
                 test_optuna(
@@ -66,10 +67,10 @@ class FullBackTester:
             end_dt = start_dt + timedelta(minutes=OPTUNA_RUN_FREQ)
 
             if finetune_only is False:
-                params = load_best_study_parameters(
-                    optuna_start_dt, optuna_end_dt, fallback_nearest=False
-                )
                 print(f"Backtesting from {start_dt} to {end_dt}")
+                params = load_best_study_parameters(
+                    optuna_start_dt, optuna_end_dt, fallback_nearest=True
+                )
                 self.backtest_after_optuna(params, start_dt, end_dt)
                 # end_dt += timedelta(minutes=params.wait_time) # this is needed but is harder to test
 
