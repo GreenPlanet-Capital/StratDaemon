@@ -13,12 +13,11 @@ from tests.back_tester import conduct_back_test
 from sys import argv
 
 START_DT = datetime(2024, 1, 1)
-END_DT = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
-    days=1
-)
+END_DT = datetime(2024, 12, 19)
+
 OPTUNA_DATA_SPAN = 1  # in weeks
 OPTUNA_RUN_FREQ = 24 * 60  # in minutes
-OPTUNA_TRIALS = 1
+OPTUNA_TRIALS = 5
 
 BUY_POWER = 1000
 MAX_AMOUNT_PER_ORDER = 100

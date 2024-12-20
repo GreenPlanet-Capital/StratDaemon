@@ -35,6 +35,7 @@ def add_rsi(
     df: DataFrame[CryptoHistorical], length: int
 ) -> DataFrame[CryptoHistorical]:
     df["rsi"] = ta.rsi(df["close"], length=length)
+    df["rsi"] = df["rsi"].fillna(50)
     return df
 
 

@@ -207,6 +207,11 @@ class FibVolRsiStrategy(BaseStrategy):
         ]
 
         for order in orders:
-            order.amount *= self.get_score(df, order)
+            score = self.get_score(df, order)
+            if str(score) == "nan":
+                score = 0.5  # unsure of the score
+            elif score < 0:
+                score = 1e-6  # avoid negative scores
+            order.amount *= score
 
         return orders

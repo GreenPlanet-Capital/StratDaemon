@@ -13,11 +13,14 @@ run-paper:
 get-results:
 	python tests/get_results.py $(ORDER)
 
-test: clean
+test:
 	python tests/back_tester.py
 
-test-full: clean-full
+test-full:
 	PYTHONPATH="${PYTHONPATH}:ml" python tests/full_back_tester.py $(TYPE)
+
+graph-full:
+	python tests/graph_full_results.py
 
 test-ml:
 	PYTHONPATH="${PYTHONPATH}:tests" python ml/tuning/test.py

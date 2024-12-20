@@ -159,6 +159,7 @@ class BackTester:
             assert all(
                 len(df) == len(dfs[0]) == self.span for df in dfs
             ), f"All dataframes must have the same length as the span: {[len(df) for df in dfs]}"
+
             input_dt_dfs = {
                 currency_code: df for currency_code, df in zip(self.currency_codes, dfs)
             }
@@ -235,6 +236,8 @@ class BackTester:
         # FIXME: Implement a more efficient way of getting data by interval
         for i, df in enumerate(self.all_data_dfs):
             df = df[(df.timestamp >= start_dt) & (df.timestamp <= end_dt)]
+            assert len(df) > 0, f"Dataframe {i} has no data"
+
             df = df.set_index("timestamp", drop=True)
             df = df.reindex(pd.date_range(start_dt, end_dt, freq="1 min"))
             df = df.interpolate(method="linear")
@@ -344,8 +347,8 @@ def conduct_back_test(
 
 if __name__ == "__main__":
     dt_now = datetime.now().replace(second=0, microsecond=0)
-    start_dt = dt_now - timedelta(days=7)
-    end_dt = dt_now
+    start_dt = datetime(2024, 1, 1)
+    end_dt = datetime(2024, 1, 2)
     params = load_best_study_parameters(start_dt, end_dt)
     crypto_currency_codes = ["DOGE", "SHIB"]
 

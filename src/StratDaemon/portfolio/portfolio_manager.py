@@ -159,6 +159,7 @@ class PortfolioManager:
             order.amount -= sell_amount
             holding.quantity -= sell_amount / cur_prices_dt[currency_code]
             cur_portfolio.buy_power += sell_amount * (1 - self.transaction_fee)
+
             executed_orders.append(order)
             self.num_sell_trades += 1
 
