@@ -16,10 +16,11 @@ get-results:
 test:
 	python tests/back_tester.py
 
-test-full:
+test-full: clean-full
 	PYTHONPATH="${PYTHONPATH}:ml" python tests/full_back_tester.py $(TYPE)
 
 graph-full:
+	rm -f results/performance_full.png
 	python tests/graph_full_results.py
 
 test-ml:

@@ -43,6 +43,8 @@ class FullBackTester:
             f"with{'out' if finetune_only else ''} backtesting"
             f" for {(end_dt - start_dt).days} days"
         )
+        if backtest_only is True:
+            self.save_result(start_dt, end_dt, self.buy_power, 0, 0)
 
         while end_dt <= END_DT:
             # TODO: revisit this logic

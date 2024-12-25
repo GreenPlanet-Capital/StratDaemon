@@ -347,8 +347,9 @@ def conduct_back_test(
 
 if __name__ == "__main__":
     dt_now = datetime.now().replace(second=0, microsecond=0)
-    start_dt = datetime(2024, 1, 1)
-    end_dt = datetime(2024, 1, 2)
+    # 2024-04-14 00:00:00,2024-04-15 00:00:00
+    start_dt = datetime(2024, 4, 14)
+    end_dt = datetime(2024, 4, 15)
     params = load_best_study_parameters(start_dt, end_dt)
     crypto_currency_codes = ["DOGE", "SHIB"]
 

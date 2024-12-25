@@ -112,7 +112,7 @@ def load_best_study_parameters_nearest(
             study_dt = study.split("_")
             study_dt_start = datetime.fromtimestamp(int(study_dt[-2]))
             study_dt_end = datetime.fromtimestamp(int(study_dt[-1]))
-            if study_dt_end > end_dt:
+            if study_dt_end >= end_dt or study_dt_start >= end_dt:
                 continue
             study_dts.append((study_dt_start, study_dt_end))
 
