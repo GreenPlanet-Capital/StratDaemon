@@ -14,9 +14,10 @@ from pandera.typing import DataFrame
 import os
 import numpy as np
 from collections import defaultdict
-from StratDaemon.utils.funcs import load_best_study_parameters
+from StratDaemon.utils.funcs import Parameters, load_best_study_parameters
 
 DEFAULT_BROKER = AlpacaBroker()
+TIMEFRAME = "hour"
 
 
 class BackTester:
@@ -34,8 +35,11 @@ class BackTester:
         strat_split = self.strat.name.split("_")
         self.strat_name = f"{strat_split[0]}_{strat_split[-1]}"
         self.all_data_dfs = [
-            self.broker.get_crypto_historical(
-                currency_code, "hour", pull_from_api=False
+            self.convert_to_timeframe(
+                self.broker.get_crypto_historical(
+                    currency_code, "minute", pull_from_api=False
+                ),
+                TIMEFRAME,
             )
             for currency_code in self.currency_codes
         ]
@@ -44,6 +48,25 @@ class BackTester:
         self.wait_time = wait_time
         self.buy_power = buy_power
         self.sanity_checks()
+
+    def convert_to_timeframe(
+        self, df: DataFrame[CryptoHistorical], timeframe: str
+    ) -> DataFrame[CryptoHistorical]:
+        if timeframe == "minute":
+            return df
+        else:
+            df_grp = df.groupby(
+                pd.Grouper(key="timestamp", freq=timeframe[0].upper())
+            ).agg(
+                {
+                    "open": "first",
+                    "high": "max",
+                    "low": "min",
+                    "close": "last",
+                    "volume": "sum",
+                }
+            )
+            return df_grp.reset_index()
 
     def sanity_checks(self) -> None:
         assert len(self.currency_codes) == len(
@@ -348,16 +371,31 @@ def conduct_back_test(
 if __name__ == "__main__":
     dt_now = datetime.now().replace(second=0, microsecond=0)
     # 2024-04-14 00:00:00,2024-04-15 00:00:00
-    start_dt = datetime(2024, 4, 14)
-    end_dt = datetime(2024, 4, 15)
-    params = load_best_study_parameters(start_dt, end_dt)
-    crypto_currency_codes = ["DOGE", "SHIB"]
+    start_dt = datetime(2024, 1, 8)
+    end_dt = datetime(2024, 12, 24)
+    # params = load_best_study_parameters(start_dt, end_dt)
+    params = Parameters(
+        p_diff=0.02,
+        vol_window=18,
+        indicator_length=20,
+        rsi_buy_threshold=55,
+        rsi_sell_threshold=80,
+        rsi_percent_incr_threshold=0.1,
+        rsi_trend_span=5,
+        trailing_stop_loss=0.05,
+        trailing_take_profit=0.1,
+        span=60,
+        wait_time=60,
+    )
+    # crypto_currency_codes = ["DOGE", "SHIB"]
+    crypto_currency_codes = ["DOGE"]
 
     # Modifications
     strat_def = FibVolRsiStrategy
-    max_amount_per_order = 100
-    max_holding_per_currency = 500
-    buy_power = 1_000
+    max_amount_per_order = 10_000
+
+    buy_power = 10_000
+    max_holding_per_currency = buy_power / len(crypto_currency_codes)
 
     conduct_back_test(
         strat_def,

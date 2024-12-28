@@ -19,9 +19,9 @@ OPTUNA_DATA_SPAN = 1  # in weeks
 OPTUNA_RUN_FREQ = 24 * 60  # in minutes
 OPTUNA_TRIALS = 5
 
-BUY_POWER = 1000
-MAX_AMOUNT_PER_ORDER = 100
-MAX_HOLDING_PER_CURRENCY = 500
+BUY_POWER = 10_000
+MAX_AMOUNT_PER_ORDER = 10_000
+MAX_HOLDING_PER_CURRENCY = 10_000
 
 
 class FullBackTester:
@@ -72,6 +72,20 @@ class FullBackTester:
                 params = load_best_study_parameters(
                     optuna_start_dt, optuna_end_dt, fallback_nearest=True
                 )
+                # params = Parameters(
+                #     p_diff=0.02,
+                #     vol_window=18,
+                #     indicator_length=20,
+                #     rsi_buy_threshold=55,
+                #     rsi_sell_threshold=80,
+                #     rsi_percent_incr_threshold=0.1,
+                #     rsi_trend_span=5,
+                #     trailing_stop_loss=0.05,
+                #     trailing_take_profit=0.1,
+                #     span=60,
+                #     wait_time=60,
+                # )
+
                 self.backtest_after_optuna(params, start_dt, end_dt)
                 # end_dt += timedelta(minutes=params.wait_time) # this is needed but is harder to test
 
@@ -132,7 +146,8 @@ class FullBackTester:
 
 
 if __name__ == "__main__":
-    currency_codes = ["DOGE", "SHIB"]
+    # currency_codes = ["DOGE", "SHIB"]
+    currency_codes = ["DOGE"]
     full_back_tester = FullBackTester(FibVolRsiStrategy, currency_codes)
     finetune_only = backtest_only = False
     if len(argv) > 1:
